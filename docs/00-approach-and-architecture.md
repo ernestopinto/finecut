@@ -36,7 +36,7 @@ Instead of a full-blown image editor, Finecut optimizes the shortest path from s
 
 | Concern | Choice | Rationale (KIS + Maintainability) |
 | :--- | :--- | :--- |
-| **Language** | Python 3.12 (3.11+ compatible) | Requested core language; strong typing support (`typing`, `dataclasses`, `Protocol`). |
+| **Language** | Python 3.14 (3.11+ compatible) | Requested core language; strong typing support (`typing`, `dataclasses`, `Protocol`). |
 | **GUI & Interactive Canvas** | **PySide6** (Qt 6 for Python) | Native `QGraphicsScene` / `QGraphicsView` provides object hit-testing, selection, z-ordering, double-click handling, drag-to-move, crisp font rendering, clipboard export, and HiDPI support out of the box. LGPL licensing is clean for commercial/closed/open `.exe` distribution. |
 | **Screen Capture** | Qt `QScreen` + `mss` / `Pillow` (validated in Phase 1) | Reliable multi-monitor and mixed-DPI capture on Windows. |
 | **Testing** | `pytest` + `pytest-qt` | Standard Python testing with headless/widget testing for Qt scenes and pure unit testing for domain logic. |
