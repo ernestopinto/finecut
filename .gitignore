@@ -1,0 +1,33 @@
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Byte-compiled / Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Packaging & build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.manifest
+packaging/output/
+
+# Test, lint & type-check caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# PyCharm / IDEs
+.idea/
+*.iml
+.vscode/
+
+# Windows OS files
+Thumbs.db
+Desktop.ini
