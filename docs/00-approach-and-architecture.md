@@ -41,8 +41,8 @@ Instead of a full-blown image editor, Finecut optimizes the shortest path from s
 | **Screen Capture** | Qt `QScreen` + `mss` / `Pillow` (validated in Phase 1) | Reliable multi-monitor and mixed-DPI capture on Windows. |
 | **Testing** | `pytest` + `pytest-qt` | Standard Python testing with headless/widget testing for Qt scenes and pure unit testing for domain logic. |
 | **Linting & Typing** | `ruff` + `mypy` | Fast linting/formatting and strict static type checking. |
-| **Executable Bundling** | **PyInstaller** (`--onedir`) | Bundles Python + PySide6 into `Finecut.exe` with fast startup (avoids `--onefile` temp extraction delay). |
-| **Windows Installer** | **Inno Setup** (`ISCC.exe`) | Produces a standard Windows `FinecutSetup-x.y.z.exe` installer with Start Menu entry, optional desktop shortcut, and clean uninstaller. |
+| **Executable & Launcher** | **PyInstaller** (`--onedir`, `windowed`) | Bundles Python + PySide6 into a standalone `Finecut.exe` GUI launcher (no console window flash, custom `.ico` icon, fast startup) plus a local dev double-click launcher (`run_finecut.bat`). |
+| **Windows Installer** | **Inno Setup** (`ISCC.exe`) | Produces a standard Windows `FinecutSetup-x.y.z.exe` installer wizard with Start Menu launcher, Desktop shortcut option, post-install launch checkbox, and clean Windows Settings uninstaller. |
 
 ---
 
