@@ -91,5 +91,10 @@ Every feature or technical task follows this strict lifecycle:
 4. **Approval**: Explicit approval before writing implementation code.
 5. **Implementation**: Work exclusively on the **`develop`** branch using small, focused changes.
 6. **Test**: Run automated checks (`ruff`, `mypy`, `pytest`) plus manual Windows GUI verification where applicable.
-7. **Commit & Push**: Commit with clear reference to `FC-XXX` and push to `develop`.
-8. **Release / Deploy**: Merge `develop` -> `main` to trigger automated CI build, PyInstaller `.exe` packaging, Inno Setup installer generation, and release artifact publishing.
+7. **Stage Related Files**: Always stage any newly created (untracked) project files (`git add <files>`) so all work is visible in IDE/Git diffs.
+8. **Commit & Push**: Write a commit message and commit only after explicit stakeholder approval; push to `origin/develop` only when explicitly requested (or pushed by stakeholder).
+9. **Release / Deploy**: Merge `develop` -> `main` to trigger automated CI build, PyInstaller `.exe` packaging, Inno Setup installer generation, and release artifact publishing.
+
+### Team Working Conventions
+- **Environment**: Per-project `.venv` (`c:\Users\pinto\PyCharmProjects\finecut\.venv`) on Python 3.14, installed editable via `pip install -e ".[dev]"`.
+- **Git Discipline**: Never commit or push automatically without approval; always stage related untracked files after implementation.

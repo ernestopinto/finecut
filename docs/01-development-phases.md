@@ -2,9 +2,13 @@
 
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
+> **Current Status & Next Step:**
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`) and Phase 1 / `FC-002` (Domain Core Models & `CanvasDocument` Foundation).
+> - **Next Up:** Write ticket **`FC-003`** — *Windows Screen Crop Overlay (`+ Novo`) & Base Image Loading*.
+
 ---
 
-## Phase 0 — Foundation, Repository & Quality Pipeline
+## Phase 0 — Foundation, Repository & Quality Pipeline *(Completed)*
 **Goal:** Establish a clean Python project skeleton, Git Flow branches (`main` and `develop`), quality gates, and automated CI checks.
 
 - **Deliverables:**
@@ -14,7 +18,7 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Configured quality tools: `ruff` (lint/format), `mypy` (strict type checking), `pytest` + `pytest-qt`.
   - Baseline CI workflow running lint, typecheck, and tests on pushes/PRs to `develop` and `main`.
 - **Planned Ticket(s):**
-  - `FC-001`: Project Bootstrap, Git Flow Setup, Python Architecture Skeleton & CI Pipeline.
+  - [x] `FC-001`: Project Bootstrap, Git Flow Setup, Python Architecture Skeleton & CI Pipeline (`DONE` — `a156bf5`).
 - **Exit Criteria:** Application launches cleanly from source; `ruff`, `mypy`, and `pytest` pass locally and in CI.
 
 ---
@@ -29,7 +33,7 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Multi-monitor & Windows HiDPI scaling support.
   - Cropped image immediately renders as the base image on the editing canvas.
 - **Planned Ticket(s):**
-  - `FC-002`: Domain Core Models & `CanvasDocument` Foundation.
+  - [x] `FC-002`: Domain Core Models & `CanvasDocument` Foundation (`DONE`).
   - `FC-003`: Windows Screen Crop Overlay (`+ Novo`) & Base Image Loading.
 - **Exit Criteria:** User can crop any window/screen area on single or multi-monitor Windows setups and immediately see the crisp crop inside Finecut.
 
