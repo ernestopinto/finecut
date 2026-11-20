@@ -1,4 +1,4 @@
-"""Full-screen frozen desktop snipping overlay for selecting a rectangular crop."""
+"""Full-screen frozen desktop snipping overlay with top floating action strip on Screen 1."""
 
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import (
@@ -9,13 +9,21 @@ from PySide6.QtGui import (
     QPainter,
     QPaintEvent,
     QPen,
+    QResizeEvent,
 )
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QWidget,
+)
 
 from finecut.domain.models import BaseImage, Rect
 from finecut.infrastructure.screen_capturer import base_image_to_pixmap, crop_base_image
 
 MIN_SNIP_DIMENSION_PX = 5
+ACTION_STRIP_TOP_MARGIN_PX = 16
 
 
 class SnipOverlay(QWidget):
@@ -28,6 +36,7 @@ class SnipOverlay(QWidget):
         self,
         frozen_screen: BaseImage,
         virtual_geometry: QRect | None = None,
+        primary_screen_geometry: QRect | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -46,15 +55,89 @@ class SnipOverlay(QWidget):
         self.setCursor(Qt.CursorShape.CrossCursor)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        target_geo = virtual_geometry or self._resolve_default_geometry()
-        self.setGeometry(target_geo)
+        self.action_strip = QFrame(self)
+        self.mode_label = QLabel("Select area", self.action_strip)
+        self.cancel_button = QPushButton("Cancel Selection", self.action_strip)
+        self._build_action_strip()
 
-    def _resolve_default_geometry(self) -> QRect:
+        target_virtual_geo = virtual_geometry or self._resolve_default_virtual_geometry()
+        self._primary_screen_geometry = primary_screen_geometry or (
+            virtual_geometry
+            if virtual_geometry is not None
+            else self._resolve_default_primary_geometry(target_virtual_geo)
+        )
+        self.setGeometry(target_virtual_geo)
+        self._position_action_strip()
+
+    def _build_action_strip(self) -> None:
+        self.action_strip.setObjectName("snipActionStrip")
+        self.action_strip.setCursor(Qt.CursorShape.ArrowCursor)
+        self.action_strip.setStyleSheet(
+            "#snipActionStrip {"
+            " background-color: #F3F4F6;"
+            " border: 1px solid #D1D5DB;"
+            " border-radius: 8px;"
+            "}"
+        )
+
+        layout = QHBoxLayout(self.action_strip)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(10)
+
+        self.mode_label.setStyleSheet("color: #111827; font-weight: 600;")
+        layout.addWidget(self.mode_label)
+
+        self.cancel_button.setToolTip("Cancel screen selection (Esc)")
+        self.cancel_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.cancel_button.setStyleSheet(
+            "QPushButton {"
+            " background-color: #FFFFFF;"
+            " color: #111827;"
+            " border: 1px solid #D1D5DB;"
+            " border-radius: 5px;"
+            " padding: 4px 10px;"
+            "}"
+            "QPushButton:hover {"
+            " background-color: #FEE2E2;"
+            " border-color: #EF4444;"
+            " color: #991B1B;"
+            "}"
+        )
+        self.cancel_button.clicked.connect(self.cancel_snip)
+        layout.addWidget(self.cancel_button)
+
+        self.action_strip.adjustSize()
+
+    def _position_action_strip(self) -> None:
+        """Align the floating action strip to the top-center of Screen 1 (primary screen)."""
+        self.action_strip.adjustSize()
+        strip_w = self.action_strip.width()
+
+        overlay_geo = self.geometry()
+        primary_geo = self._primary_screen_geometry
+
+        local_screen_x = primary_geo.x() - overlay_geo.x()
+        local_screen_y = primary_geo.y() - overlay_geo.y()
+        screen_w = primary_geo.width() if primary_geo.width() > 0 else self.width()
+
+        x = local_screen_x + max(8, (screen_w - strip_w) // 2)
+        y = max(0, local_screen_y) + ACTION_STRIP_TOP_MARGIN_PX
+        self.action_strip.move(x, y)
+        self.action_strip.raise_()
+
+    def _resolve_default_virtual_geometry(self) -> QRect:
         screen = QGuiApplication.primaryScreen()
         if screen is not None:
             return screen.virtualGeometry()
         logical_size = self._frozen_pixmap.deviceIndependentSize()
         return QRect(0, 0, max(1, int(logical_size.width())), max(1, int(logical_size.height())))
+
+    @staticmethod
+    def _resolve_default_primary_geometry(fallback_virtual_geo: QRect) -> QRect:
+        screen = QGuiApplication.primaryScreen()
+        if screen is not None:
+            return screen.geometry()
+        return fallback_virtual_geo
 
     def selection_rect(self) -> QRect:
         """Return the current normalized selection rectangle clamped to widget bounds."""
@@ -74,6 +157,10 @@ class SnipOverlay(QWidget):
         self._current_pos = None
         self.close()
         self.snip_cancelled.emit()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._position_action_strip()
 
     def paintEvent(self, event: QPaintEvent) -> None:
         del event
