@@ -24,8 +24,8 @@ def _sample_base_image() -> BaseImage:
 
 
 def test_allowed_colors_and_fonts_match_spec() -> None:
-    """Verify strictly 2 drawing colors and 4 classic font families exist."""
-    assert [color.name for color in StrokeColor] == ["RED", "BLUE"]
+    """Verify strictly 3 drawing colors (Red, Blue, Black) and 4 classic font families exist."""
+    assert [color.name for color in StrokeColor] == ["RED", "BLUE", "BLACK"]
     assert [font.value for font in FontFamily] == [
         "Arial",
         "Times New Roman",
