@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), and Phase 2 / `FC-004` (Freehand Drawing Tool & Movable Strokes).
-> - **Next Up (Phase 2):** Write ticket **`FC-005`** — *Text Annotation Tool (4 Fonts, Enter-to-Commit) & Movable Text Objects*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), and Phase 2 / `FC-005` (Text Annotation Tool & Movable Text Objects).
+> - **Next Up (Phase 3):** Write ticket **`FC-006`** — *Flatten & Export (Clipboard Copy + Save PNG/JPG)*.
 
 ---
 
@@ -53,8 +53,8 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
     - Committed text objects can be dragged/moved freely over the base image.
   - Support for **`n` independent objects** (any mix of strokes and texts) over the single base crop.
 - **Planned Ticket(s):**
-  - [x] `FC-004`: Freehand Drawing Tool (Red/Blue/Black) & Double-Click-to-Move Stroke Objects (`DONE`).
-  - `FC-005`: Text Annotation Tool (4 Fonts, Enter-to-Commit) & Movable Text Objects.
+  - [x] `FC-004`: Freehand Drawing Tool (Red/Blue/Black) & Double-Click-to-Move Stroke Objects (`DONE` — `104d36b`).
+  - [x] `FC-005`: Text Annotation Tool (4 Fonts, Enter-to-Commit) & Movable Text Objects (`DONE`).
 - **Exit Criteria:** User can capture an app screen, draw multiple Red/Blue/Black strokes, double-click any stroke to move it, add multiple text boxes in the 4 fonts, commit with `Enter`, and drag them into position.
 
 ---

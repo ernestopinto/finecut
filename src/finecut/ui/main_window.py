@@ -5,6 +5,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
+    QComboBox,
     QLabel,
     QMainWindow,
     QPushButton,
@@ -15,7 +16,7 @@ from PySide6.QtWidgets import (
 )
 
 from finecut.application.document_controller import DocumentController
-from finecut.domain.models import BaseImage, Point, StrokeColor
+from finecut.domain.models import BaseImage, CanvasTool, FontFamily, Point, StrokeColor
 from finecut.domain.ports import ScreenCapturer
 from finecut.infrastructure.screen_capturer import QtScreenCapturer
 from finecut.ui.canvas_scene import BlueprintCanvasScene
@@ -34,17 +35,23 @@ class FinecutMainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Finecut")
-        self.setMinimumSize(540, 320)
+        self.setMinimumSize(620, 360)
 
         self._document_controller = document_controller or DocumentController()
         self._screen_capturer: ScreenCapturer = screen_capturer or QtScreenCapturer()
         self._active_overlay: SnipOverlay | None = None
 
         self.new_snip_button = QPushButton("+ Novo", self)
+        self.draw_tool_button = QPushButton("Draw", self)
+        self.text_tool_button = QPushButton("Text", self)
+        self._tool_button_group = QButtonGroup(self)
+
         self.red_color_button = QPushButton("Red", self)
         self.blue_color_button = QPushButton("Blue", self)
         self.black_color_button = QPushButton("Black", self)
         self._color_button_group = QButtonGroup(self)
+
+        self.font_combo_box = QComboBox(self)
 
         self.canvas_scene = BlueprintCanvasScene(self)
         self.canvas_view = BlueprintCanvasView(self.canvas_scene, self)
@@ -80,11 +87,30 @@ class FinecutMainWindow(QMainWindow):
         toolbar.addWidget(self.new_snip_button)
         toolbar.addSeparator()
 
+        self._tool_button_group.setExclusive(True)
+        tool_buttons: tuple[tuple[QPushButton, CanvasTool, str], ...] = (
+            (self.draw_tool_button, CanvasTool.DRAW, "Freehand Draw tool"),
+            (
+                self.text_tool_button,
+                CanvasTool.TEXT,
+                "Text annotation tool (press Enter to commit)",
+            ),
+        )
+        for button, tool, tooltip in tool_buttons:
+            button.setCheckable(True)
+            button.setToolTip(tooltip)
+            self._tool_button_group.addButton(button)
+            toolbar.addWidget(button)
+            button.clicked.connect(lambda checked=False, t=tool: self.set_active_tool(t))
+
+        self.draw_tool_button.setChecked(True)
+        toolbar.addSeparator()
+
         self._color_button_group.setExclusive(True)
         color_buttons: tuple[tuple[QPushButton, StrokeColor, str], ...] = (
-            (self.red_color_button, StrokeColor.RED, "Draw in Red (#E53935)"),
-            (self.blue_color_button, StrokeColor.BLUE, "Draw in Blue (#1E88E5)"),
-            (self.black_color_button, StrokeColor.BLACK, "Draw in Black (#000000)"),
+            (self.red_color_button, StrokeColor.RED, "Draw / write in Red (#E53935)"),
+            (self.blue_color_button, StrokeColor.BLUE, "Draw / write in Blue (#1E88E5)"),
+            (self.black_color_button, StrokeColor.BLACK, "Draw / write in Black (#000000)"),
         )
         for button, color, tooltip in color_buttons:
             button.setCheckable(True)
@@ -94,6 +120,14 @@ class FinecutMainWindow(QMainWindow):
             button.clicked.connect(lambda checked=False, c=color: self.set_stroke_color(c))
 
         self.red_color_button.setChecked(True)
+        toolbar.addSeparator()
+
+        self.font_combo_box.setToolTip("Select text font family")
+        for font_family in FontFamily:
+            self.font_combo_box.addItem(font_family.value)
+        self.font_combo_box.currentTextChanged.connect(self._on_font_combo_text_changed)
+        toolbar.addWidget(self.font_combo_box)
+
         self.addToolBar(toolbar)
 
     def _build_central_stack(self) -> None:
@@ -112,14 +146,28 @@ class FinecutMainWindow(QMainWindow):
 
     def _wire_canvas_signals(self) -> None:
         self.canvas_scene.stroke_completed.connect(self._on_stroke_completed)
+        self.canvas_scene.text_committed.connect(self._on_text_committed)
         self.canvas_scene.object_moved.connect(self._on_object_moved)
 
     def _register_shortcuts(self) -> None:
         self._new_snip_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
         self._new_snip_shortcut.activated.connect(self.start_screen_snip)
 
+    def set_active_tool(self, tool: CanvasTool) -> None:
+        """Switch the active canvas tool between Draw and Text across controller, scene, and UI."""
+        self._document_controller.set_active_tool(tool)
+        self.canvas_scene.set_active_tool(tool)
+
+        button_by_tool = {
+            CanvasTool.DRAW: self.draw_tool_button,
+            CanvasTool.TEXT: self.text_tool_button,
+        }
+        target_button = button_by_tool[tool]
+        if not target_button.isChecked():
+            target_button.setChecked(True)
+
     def set_stroke_color(self, color: StrokeColor) -> None:
-        """Switch the active freehand drawing color across controller, scene, and toolbar."""
+        """Switch the active drawing/text color across controller, scene, and toolbar."""
         self._document_controller.set_active_color(color)
         self.canvas_scene.set_active_color(color)
 
@@ -131,6 +179,21 @@ class FinecutMainWindow(QMainWindow):
         target_button = button_by_color[color]
         if not target_button.isChecked():
             target_button.setChecked(True)
+
+    def set_font_family(self, font: FontFamily) -> None:
+        """Switch the active text font family across controller, scene, and toolbar."""
+        self._document_controller.set_active_font(font)
+        self.canvas_scene.set_active_font(font)
+
+        idx = self.font_combo_box.findText(font.value)
+        if idx >= 0 and self.font_combo_box.currentIndex() != idx:
+            self.font_combo_box.setCurrentIndex(idx)
+
+    def _on_font_combo_text_changed(self, text: str) -> None:
+        for font_family in FontFamily:
+            if font_family.value == text:
+                self.set_font_family(font_family)
+                return
 
     def start_screen_snip(self) -> None:
         """Hide the main window, freeze the screen, and launch the SnipOverlay."""
@@ -168,6 +231,12 @@ class FinecutMainWindow(QMainWindow):
             return
         stroke = self._document_controller.add_stroke(points)
         self.canvas_scene.add_stroke_item(stroke)
+
+    def _on_text_committed(self, text: str, position: Point) -> None:
+        if not self._document_controller.has_document:
+            return
+        text_obj = self._document_controller.add_text(text=text, position=position)
+        self.canvas_scene.add_text_item(text_obj)
 
     def _on_object_moved(self, object_id: str, new_position: Point) -> None:
         if not self._document_controller.has_document:

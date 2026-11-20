@@ -23,6 +23,13 @@ class FontFamily(StrEnum):
     COURIER = "Courier"
 
 
+class CanvasTool(StrEnum):
+    """Active canvas interaction tool mode."""
+
+    DRAW = "draw"
+    TEXT = "text"
+
+
 @dataclass(frozen=True, slots=True)
 class Point:
     """Immutable 2D canvas coordinate."""
