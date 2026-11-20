@@ -1,20 +1,42 @@
 """QGraphicsScene hosting the immutable cropped base image and annotation objects."""
 
-from PySide6.QtCore import QObject
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsPixmapItem, QGraphicsScene
+from math import hypot
 
-from finecut.domain.models import CanvasDocument
+from PySide6.QtCore import QObject, QPointF, Qt, Signal
+from PySide6.QtGui import QColor, QPen
+from PySide6.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsPixmapItem,
+    QGraphicsScene,
+    QGraphicsSceneMouseEvent,
+)
+
+from finecut.domain.models import CanvasDocument, Point, StrokeColor, StrokeObject
 from finecut.infrastructure.screen_capturer import base_image_to_pixmap
+from finecut.ui.items.stroke_item import StrokeGraphicsItem, build_painter_path
 
 BASE_IMAGE_Z_VALUE = -1000.0
+PREVIEW_STROKE_Z_VALUE = 10000.0
+MIN_STROKE_DRAG_DISTANCE_PX = 2.0
 
 
 class BlueprintCanvasScene(QGraphicsScene):
     """Interactive graphics scene displaying the base crop and foreground objects."""
 
+    stroke_completed = Signal(object)
+    object_moved = Signal(str, object)
+
     def __init__(self, parent: QObject | None = None) -> None:
         super().__init__(parent)
         self._base_pixmap_item: QGraphicsPixmapItem | None = None
+        self._active_color: StrokeColor = StrokeColor.RED
+        self._stroke_width: float = 3.0
+
+        self._is_drawing_stroke: bool = False
+        self._active_points: list[Point] = []
+        self._preview_path_item: QGraphicsPathItem | None = None
+        self._stroke_items: dict[str, StrokeGraphicsItem] = {}
 
     @property
     def has_base_image(self) -> bool:
@@ -26,9 +48,28 @@ class BlueprintCanvasScene(QGraphicsScene):
         """Return the background QGraphicsPixmapItem if loaded."""
         return self._base_pixmap_item
 
+    @property
+    def active_color(self) -> StrokeColor:
+        """Return the active freehand drawing color."""
+        return self._active_color
+
+    def set_active_color(self, color: StrokeColor) -> None:
+        """Set the active freehand drawing color (Red, Blue, or Black)."""
+        self._active_color = color
+
+    @property
+    def stroke_items(self) -> dict[str, StrokeGraphicsItem]:
+        """Return a mapping of stroke IDs to their StrokeGraphicsItem instances."""
+        return dict(self._stroke_items)
+
     def set_document(self, document: CanvasDocument) -> None:
-        """Load the document's BaseImage onto the scene background."""
+        """Load the document's BaseImage and any existing annotation objects onto the scene."""
         self.clear()
+        self._stroke_items.clear()
+        self._preview_path_item = None
+        self._is_drawing_stroke = False
+        self._active_points.clear()
+
         pixmap = base_image_to_pixmap(document.base_image)
         item = self.addPixmap(pixmap)
         item.setZValue(BASE_IMAGE_Z_VALUE)
@@ -38,3 +79,114 @@ class BlueprintCanvasScene(QGraphicsScene):
 
         logical_size = pixmap.deviceIndependentSize()
         self.setSceneRect(0.0, 0.0, logical_size.width(), logical_size.height())
+
+        for obj in document.visible_objects():
+            if isinstance(obj, StrokeObject):
+                self.add_stroke_item(obj)
+
+    def add_stroke_item(self, stroke: StrokeObject) -> StrokeGraphicsItem:
+        """Create and add a StrokeGraphicsItem to the scene for a domain StrokeObject."""
+        stroke_item = StrokeGraphicsItem(stroke, on_moved=self._notify_object_moved)
+        self.addItem(stroke_item)
+        self._stroke_items[stroke.id] = stroke_item
+        return stroke_item
+
+    def deactivate_all_move_modes(self, except_id: str | None = None) -> None:
+        """Disable double-click move mode on all stroke items except except_id."""
+        for stroke_id, item in self._stroke_items.items():
+            if stroke_id != except_id and item.is_move_enabled:
+                item.disable_move_mode()
+
+    def _notify_object_moved(self, object_id: str, new_position: Point) -> None:
+        self.object_moved.emit(object_id, new_position)
+
+    def _stroke_item_at(self, scene_pos: QPointF) -> StrokeGraphicsItem | None:
+        for item in self.items(scene_pos):
+            if isinstance(item, StrokeGraphicsItem):
+                return item
+        return None
+
+    def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self.has_base_image:
+            self._cancel_preview_stroke()
+            hit_stroke = self._stroke_item_at(event.scenePos())
+            if hit_stroke is not None:
+                self.deactivate_all_move_modes(except_id=hit_stroke.stroke_id)
+                hit_stroke.enable_move_mode()
+                event.accept()
+                return
+        super().mouseDoubleClickEvent(event)
+
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self.has_base_image:
+            hit_stroke = self._stroke_item_at(event.scenePos())
+            if hit_stroke is not None and hit_stroke.is_move_enabled:
+                super().mousePressEvent(event)
+                return
+
+            self.deactivate_all_move_modes()
+            self._start_preview_stroke(event.scenePos())
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if self._is_drawing_stroke and self._preview_path_item is not None:
+            pos = event.scenePos()
+            self._active_points.append(Point(float(pos.x()), float(pos.y())))
+            self._preview_path_item.setPath(build_painter_path(tuple(self._active_points)))
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton and self._is_drawing_stroke:
+            pos = event.scenePos()
+            end_pt = Point(float(pos.x()), float(pos.y()))
+            if not self._active_points or self._active_points[-1] != end_pt:
+                self._active_points.append(end_pt)
+
+            points = tuple(self._active_points)
+            self._cancel_preview_stroke()
+
+            if self._has_minimum_drag_distance(points):
+                self.stroke_completed.emit(points)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def _start_preview_stroke(self, scene_pos: QPointF) -> None:
+        self._is_drawing_stroke = True
+        start_pt = Point(float(scene_pos.x()), float(scene_pos.y()))
+        self._active_points = [start_pt]
+
+        preview = QGraphicsPathItem()
+        pen = QPen(
+            QColor(self._active_color.value),
+            self._stroke_width,
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.RoundCap,
+            Qt.PenJoinStyle.RoundJoin,
+        )
+        preview.setPen(pen)
+        preview.setZValue(PREVIEW_STROKE_Z_VALUE)
+        preview.setPath(build_painter_path(tuple(self._active_points)))
+        self.addItem(preview)
+        self._preview_path_item = preview
+
+    def _cancel_preview_stroke(self) -> None:
+        if self._preview_path_item is not None:
+            self.removeItem(self._preview_path_item)
+            self._preview_path_item = None
+        self._is_drawing_stroke = False
+        self._active_points.clear()
+
+    @staticmethod
+    def _has_minimum_drag_distance(points: tuple[Point, ...]) -> bool:
+        if len(points) < 2:
+            return False
+        origin = points[0]
+        return any(
+            hypot(pt.x - origin.x, pt.y - origin.y) >= MIN_STROKE_DRAG_DISTANCE_PX
+            for pt in points[1:]
+        )

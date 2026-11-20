@@ -17,7 +17,7 @@ Instead of a full-blown image editor, Finecut optimizes the shortest path from s
 - **Screen Crop**: Trigger a new crop (`+ Novo`), select a rectangular region on screen, and immediately open it as the base canvas image.
 - **Freehand Drawing Tool**:
   - Draw freely on top of the cropped base image.
-  - Restricted by design to **2 colors only**: **Red** and **Blue** (KIS).
+  - Restricted by design to **3 colors only**: **Red**, **Blue**, and **Black** (KIS).
   - Each completed stroke is stored as an **independent movable object**: after creation, the user **double-clicks** the stroke to enter move/drag state and reposition it.
 - **Text Tool**:
   - Add text annotations directly on the canvas.

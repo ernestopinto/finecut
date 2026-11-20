@@ -7,10 +7,11 @@ from enum import StrEnum
 
 
 class StrokeColor(StrEnum):
-    """Allowed drawing and annotation colors (strictly Red and Blue per KIS spec)."""
+    """Allowed drawing and annotation colors (strictly Red, Blue, and Black per KIS spec)."""
 
     RED = "#E53935"
     BLUE = "#1E88E5"
+    BLACK = "#000000"
 
 
 class FontFamily(StrEnum):

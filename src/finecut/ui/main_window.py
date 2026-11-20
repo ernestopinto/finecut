@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QLabel,
     QMainWindow,
     QPushButton,
@@ -14,7 +15,7 @@ from PySide6.QtWidgets import (
 )
 
 from finecut.application.document_controller import DocumentController
-from finecut.domain.models import BaseImage
+from finecut.domain.models import BaseImage, Point, StrokeColor
 from finecut.domain.ports import ScreenCapturer
 from finecut.infrastructure.screen_capturer import QtScreenCapturer
 from finecut.ui.canvas_scene import BlueprintCanvasScene
@@ -40,6 +41,11 @@ class FinecutMainWindow(QMainWindow):
         self._active_overlay: SnipOverlay | None = None
 
         self.new_snip_button = QPushButton("+ Novo", self)
+        self.red_color_button = QPushButton("Red", self)
+        self.blue_color_button = QPushButton("Blue", self)
+        self.black_color_button = QPushButton("Black", self)
+        self._color_button_group = QButtonGroup(self)
+
         self.canvas_scene = BlueprintCanvasScene(self)
         self.canvas_view = BlueprintCanvasView(self.canvas_scene, self)
         self._central_stack = QStackedWidget(self)
@@ -47,6 +53,7 @@ class FinecutMainWindow(QMainWindow):
 
         self._build_toolbar()
         self._build_central_stack()
+        self._wire_canvas_signals()
         self._register_shortcuts()
 
     @property
@@ -67,9 +74,26 @@ class FinecutMainWindow(QMainWindow):
     def _build_toolbar(self) -> None:
         toolbar = QToolBar("Main Toolbar", self)
         toolbar.setMovable(False)
+
         self.new_snip_button.setToolTip("Capture a screen region to start blueprinting (Ctrl+N)")
         self.new_snip_button.clicked.connect(self.start_screen_snip)
         toolbar.addWidget(self.new_snip_button)
+        toolbar.addSeparator()
+
+        self._color_button_group.setExclusive(True)
+        color_buttons: tuple[tuple[QPushButton, StrokeColor, str], ...] = (
+            (self.red_color_button, StrokeColor.RED, "Draw in Red (#E53935)"),
+            (self.blue_color_button, StrokeColor.BLUE, "Draw in Blue (#1E88E5)"),
+            (self.black_color_button, StrokeColor.BLACK, "Draw in Black (#000000)"),
+        )
+        for button, color, tooltip in color_buttons:
+            button.setCheckable(True)
+            button.setToolTip(tooltip)
+            self._color_button_group.addButton(button)
+            toolbar.addWidget(button)
+            button.clicked.connect(lambda checked=False, c=color: self.set_stroke_color(c))
+
+        self.red_color_button.setChecked(True)
         self.addToolBar(toolbar)
 
     def _build_central_stack(self) -> None:
@@ -86,9 +110,27 @@ class FinecutMainWindow(QMainWindow):
         self._central_stack.setCurrentWidget(self._placeholder_widget)
         self.setCentralWidget(self._central_stack)
 
+    def _wire_canvas_signals(self) -> None:
+        self.canvas_scene.stroke_completed.connect(self._on_stroke_completed)
+        self.canvas_scene.object_moved.connect(self._on_object_moved)
+
     def _register_shortcuts(self) -> None:
         self._new_snip_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
         self._new_snip_shortcut.activated.connect(self.start_screen_snip)
+
+    def set_stroke_color(self, color: StrokeColor) -> None:
+        """Switch the active freehand drawing color across controller, scene, and toolbar."""
+        self._document_controller.set_active_color(color)
+        self.canvas_scene.set_active_color(color)
+
+        button_by_color = {
+            StrokeColor.RED: self.red_color_button,
+            StrokeColor.BLUE: self.blue_color_button,
+            StrokeColor.BLACK: self.black_color_button,
+        }
+        target_button = button_by_color[color]
+        if not target_button.isChecked():
+            target_button.setChecked(True)
 
     def start_screen_snip(self) -> None:
         """Hide the main window, freeze the screen, and launch the SnipOverlay."""
@@ -120,6 +162,17 @@ class FinecutMainWindow(QMainWindow):
         self._active_overlay = None
         self._restore_window()
         self.statusBar().showMessage("Screen capture cancelled.", 3000)
+
+    def _on_stroke_completed(self, points: tuple[Point, ...]) -> None:
+        if not self._document_controller.has_document:
+            return
+        stroke = self._document_controller.add_stroke(points)
+        self.canvas_scene.add_stroke_item(stroke)
+
+    def _on_object_moved(self, object_id: str, new_position: Point) -> None:
+        if not self._document_controller.has_document:
+            return
+        self._document_controller.move_object(object_id, new_position)
 
     def _restore_window(self) -> None:
         self.showNormal()
