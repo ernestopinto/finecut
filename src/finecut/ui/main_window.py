@@ -1,11 +1,14 @@
 """Primary application window shell for Finecut."""
 
+from pathlib import Path
+
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
     QComboBox,
+    QFileDialog,
     QLabel,
     QMainWindow,
     QPushButton,
@@ -17,7 +20,8 @@ from PySide6.QtWidgets import (
 
 from finecut.application.document_controller import DocumentController
 from finecut.domain.models import BaseImage, CanvasTool, FontFamily, Point, StrokeColor
-from finecut.domain.ports import ScreenCapturer
+from finecut.domain.ports import ClipboardPort, ImageExporter, ScreenCapturer
+from finecut.infrastructure.export_adapters import QtClipboardAdapter, QtFileImageExporter
 from finecut.infrastructure.screen_capturer import QtScreenCapturer
 from finecut.ui.canvas_scene import BlueprintCanvasScene
 from finecut.ui.canvas_view import BlueprintCanvasView
@@ -31,14 +35,18 @@ class FinecutMainWindow(QMainWindow):
         self,
         document_controller: DocumentController | None = None,
         screen_capturer: ScreenCapturer | None = None,
+        clipboard_port: ClipboardPort | None = None,
+        image_exporter: ImageExporter | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Finecut")
-        self.setMinimumSize(620, 360)
+        self.setMinimumSize(680, 380)
 
         self._document_controller = document_controller or DocumentController()
         self._screen_capturer: ScreenCapturer = screen_capturer or QtScreenCapturer()
+        self._clipboard_port: ClipboardPort = clipboard_port or QtClipboardAdapter()
+        self._image_exporter: ImageExporter = image_exporter or QtFileImageExporter()
         self._active_overlay: SnipOverlay | None = None
 
         self.new_snip_button = QPushButton("+ Novo", self)
@@ -52,6 +60,8 @@ class FinecutMainWindow(QMainWindow):
         self._color_button_group = QButtonGroup(self)
 
         self.font_combo_box = QComboBox(self)
+        self.copy_button = QPushButton("Copy", self)
+        self.save_button = QPushButton("Save", self)
 
         self.canvas_scene = BlueprintCanvasScene(self)
         self.canvas_view = BlueprintCanvasView(self.canvas_scene, self)
@@ -127,6 +137,15 @@ class FinecutMainWindow(QMainWindow):
             self.font_combo_box.addItem(font_family.value)
         self.font_combo_box.currentTextChanged.connect(self._on_font_combo_text_changed)
         toolbar.addWidget(self.font_combo_box)
+        toolbar.addSeparator()
+
+        self.copy_button.setToolTip("Copy flattened blueprint to clipboard (Ctrl+C)")
+        self.copy_button.clicked.connect(self.copy_blueprint_to_clipboard)
+        toolbar.addWidget(self.copy_button)
+
+        self.save_button.setToolTip("Save flattened blueprint to file (Ctrl+S)")
+        self.save_button.clicked.connect(lambda checked=False: self.save_blueprint_to_file())
+        toolbar.addWidget(self.save_button)
 
         self.addToolBar(toolbar)
 
@@ -152,6 +171,12 @@ class FinecutMainWindow(QMainWindow):
     def _register_shortcuts(self) -> None:
         self._new_snip_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
         self._new_snip_shortcut.activated.connect(self.start_screen_snip)
+
+        self._copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
+        self._copy_shortcut.activated.connect(self.copy_blueprint_to_clipboard)
+
+        self._save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self._save_shortcut.activated.connect(lambda: self.save_blueprint_to_file())
 
     def set_active_tool(self, tool: CanvasTool) -> None:
         """Switch the active canvas tool between Draw and Text across controller, scene, and UI."""
@@ -194,6 +219,40 @@ class FinecutMainWindow(QMainWindow):
             if font_family.value == text:
                 self.set_font_family(font_family)
                 return
+
+    def copy_blueprint_to_clipboard(self) -> bool:
+        """Flatten the active blueprint canvas and copy it onto the system clipboard."""
+        if not self._document_controller.has_document or not self.canvas_scene.has_base_image:
+            self.statusBar().showMessage("Capture a screen crop before copying.", 3000)
+            return False
+
+        flattened = self.canvas_scene.render_flattened_image()
+        self._clipboard_port.copy_image(flattened)
+        self.statusBar().showMessage("Copied blueprint to clipboard.", 3000)
+        return True
+
+    def save_blueprint_to_file(self, target_path: Path | None = None) -> Path | None:
+        """Flatten the active blueprint canvas and save it as a PNG or JPEG file."""
+        if not self._document_controller.has_document or not self.canvas_scene.has_base_image:
+            self.statusBar().showMessage("Capture a screen crop before saving.", 3000)
+            return None
+
+        resolved_path = target_path
+        if resolved_path is None:
+            selected_file, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Blueprint",
+                "blueprint.png",
+                "PNG Image (*.png);;JPEG Image (*.jpg *.jpeg)",
+            )
+            if not selected_file:
+                return None
+            resolved_path = Path(selected_file)
+
+        flattened = self.canvas_scene.render_flattened_image()
+        self._image_exporter.save_image(flattened, resolved_path)
+        self.statusBar().showMessage(f"Saved blueprint to {resolved_path.name}", 4000)
+        return resolved_path
 
     def start_screen_snip(self) -> None:
         """Hide the main window, freeze the screen, and launch the SnipOverlay."""

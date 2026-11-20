@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), and Phase 2 / `FC-005` (Text Annotation Tool & Movable Text Objects).
-> - **Next Up (Phase 3):** Write ticket **`FC-006`** — *Flatten & Export (Clipboard Copy + Save PNG/JPG)*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), and Phase 3 / `FC-006` (Flatten & Export).
+> - **Next Up (Phase 3):** Write ticket **`FC-007`** — *Object Deletion & Undo/Redo Command History*.
 
 ---
 
@@ -68,7 +68,7 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - **Essential Editing**: Delete selected object (`Del` / `Backspace`), Undo/Redo stack (`Ctrl+Z` / `Ctrl+Y`), clear tool mode (`Esc`), clean visual selection indicator when moving objects.
   - Toolbar visual polish matching the clean, distraction-free Windows 11 *Ferramenta de Recorte* aesthetic (`docs/image1.jpg`).
 - **Planned Ticket(s):**
-  - `FC-006`: Flatten & Export (Clipboard Copy + Save PNG/JPG).
+  - [x] `FC-006`: Flatten & Export (Clipboard Copy + Save PNG/JPG) (`DONE`).
   - `FC-007`: Object Deletion & Undo/Redo Command History.
 - **Exit Criteria:** Full end-to-end daily workflow (`+ Novo` -> draw/text/move -> `Ctrl+C` paste into Jira/Slack/Teams or `Ctrl+S` to PNG) works smoothly.
 

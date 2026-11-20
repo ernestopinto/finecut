@@ -13,14 +13,16 @@ from finecut.domain.models import (
     StrokeObject,
     TextObject,
 )
-from finecut.domain.ports import ScreenCapturer
+from finecut.domain.ports import ClipboardPort, ImageExporter, ScreenCapturer
 
 __all__ = [
     "BaseImage",
     "CanvasDocument",
     "CanvasObject",
     "CanvasTool",
+    "ClipboardPort",
     "FontFamily",
+    "ImageExporter",
     "Layer",
     "Point",
     "Rect",
