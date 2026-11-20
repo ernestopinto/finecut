@@ -144,7 +144,7 @@ def test_committed_text_object_is_movable_and_coexists_with_n_drawings(
     window.text_tool_button.click()
     for idx, font in enumerate((FontFamily.ARIAL, FontFamily.TIMES_NEW_ROMAN)):
         window.set_font_family(font)
-        pos = window.canvas_view.mapFromScene(QPointF(60.0 + idx * 100.0, 120.0))
+        pos = window.canvas_view.mapFromScene(QPointF(60.0, 110.0 + idx * 80.0))
         QTest.mouseClick(
             viewport,
             Qt.MouseButton.LeftButton,

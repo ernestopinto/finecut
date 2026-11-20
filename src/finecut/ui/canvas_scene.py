@@ -180,10 +180,19 @@ class BlueprintCanvasScene(QGraphicsScene):
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.has_base_image:
             self._cancel_preview_stroke()
-            hit_stroke = self._stroke_item_at(event.scenePos())
+            scene_pos = event.scenePos()
+            hit_stroke = self._stroke_item_at(scene_pos)
             if hit_stroke is not None:
                 self.deactivate_all_move_modes(except_id=hit_stroke.stroke_id)
                 hit_stroke.enable_move_mode()
+                event.accept()
+                return
+            if (
+                self._active_tool == CanvasTool.TEXT
+                and self._draft_text_item is None
+                and self._text_item_at(scene_pos) is None
+            ):
+                self._start_draft_text(scene_pos)
                 event.accept()
                 return
         super().mouseDoubleClickEvent(event)
