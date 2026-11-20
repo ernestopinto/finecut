@@ -6,7 +6,7 @@
 | **Type** | Technical Task / Foundation |
 | **Epic / Phase** | Phase 0 — Foundation, Repository & Quality Pipeline |
 | **Methodology** | Agile SCRUM (Sprint 0) |
-| **Status** | `DONE` (Committed on `develop`; automated checks passed) |
+| **Status** | `DONE` (Committed as `a156bf5` and pushed to `origin/develop`) |
 | **Target Branch** | `develop` (repo initialized with `main` + `develop`) |
 | **Priority** | Highest (Blocker for all feature tickets) |
 
