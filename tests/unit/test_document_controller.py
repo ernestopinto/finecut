@@ -28,6 +28,8 @@ def test_document_controller_lifecycle() -> None:
     controller = DocumentController()
     assert controller.current_document is None
     assert controller.has_document is False
+    assert controller.can_undo is False
+    assert controller.can_redo is False
     assert controller.active_tool == CanvasTool.DRAW
     assert controller.active_color == StrokeColor.RED
     assert controller.active_font == FontFamily.ARIAL
@@ -111,3 +113,53 @@ def test_document_controller_add_and_move_text_in_four_fonts() -> None:
         obj.id: obj for obj in updated_doc.visible_objects() if isinstance(obj, TextObject)
     }
     assert visible_texts[created_texts[0].id].position == Point(250.0, 310.0)
+
+
+def test_document_controller_undo_redo_and_remove_object() -> None:
+    """Verify undo/redo history across stroke add, text add, move, and remove_object."""
+    controller = DocumentController()
+
+    with pytest.raises(RuntimeError, match="no document is loaded"):
+        controller.remove_object("missing")
+    assert controller.undo() is None
+    assert controller.redo() is None
+
+    controller.start_new_document(_sample_image())
+    assert controller.can_undo is False
+    assert controller.can_redo is False
+
+    stroke = controller.add_stroke((Point(0.0, 0.0), Point(25.0, 25.0)))
+    assert controller.can_undo is True
+    assert controller.can_redo is False
+
+    text_obj = controller.add_text("Action", Point(40.0, 50.0))
+    assert controller.current_document is not None
+    assert len(controller.current_document.visible_objects()) == 2
+
+    controller.move_object(text_obj.id, Point(40.0, 50.0))
+    controller.move_object(text_obj.id, Point(100.0, 120.0))
+    controller.remove_object(stroke.id)
+
+    assert [obj.id for obj in controller.current_document.visible_objects()] == [text_obj.id]
+
+    doc_after_undo_remove = controller.undo()
+    assert doc_after_undo_remove is not None
+    assert [obj.id for obj in doc_after_undo_remove.visible_objects()] == [
+        stroke.id,
+        text_obj.id,
+    ]
+    assert controller.can_redo is True
+
+    doc_after_undo_move = controller.undo()
+    assert doc_after_undo_move is not None
+    restored_text = doc_after_undo_move.visible_objects()[1]
+    assert restored_text.position == Point(40.0, 50.0)
+
+    doc_after_redo_move = controller.redo()
+    assert doc_after_redo_move is not None
+    reapplied_text = doc_after_redo_move.visible_objects()[1]
+    assert reapplied_text.position == Point(100.0, 120.0)
+
+    controller.start_new_document(_sample_image())
+    assert controller.can_undo is False
+    assert controller.can_redo is False

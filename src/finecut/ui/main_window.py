@@ -19,7 +19,14 @@ from PySide6.QtWidgets import (
 )
 
 from finecut.application.document_controller import DocumentController
-from finecut.domain.models import BaseImage, CanvasTool, FontFamily, Point, StrokeColor
+from finecut.domain.models import (
+    BaseImage,
+    CanvasDocument,
+    CanvasTool,
+    FontFamily,
+    Point,
+    StrokeColor,
+)
 from finecut.domain.ports import ClipboardPort, ImageExporter, ScreenCapturer
 from finecut.infrastructure.export_adapters import QtClipboardAdapter, QtFileImageExporter
 from finecut.infrastructure.screen_capturer import QtScreenCapturer
@@ -41,7 +48,7 @@ class FinecutMainWindow(QMainWindow):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle("Finecut")
-        self.setMinimumSize(680, 380)
+        self.setMinimumSize(780, 420)
 
         self._document_controller = document_controller or DocumentController()
         self._screen_capturer: ScreenCapturer = screen_capturer or QtScreenCapturer()
@@ -60,6 +67,9 @@ class FinecutMainWindow(QMainWindow):
         self._color_button_group = QButtonGroup(self)
 
         self.font_combo_box = QComboBox(self)
+        self.undo_button = QPushButton("Undo", self)
+        self.redo_button = QPushButton("Redo", self)
+        self.delete_button = QPushButton("Delete", self)
         self.copy_button = QPushButton("Copy", self)
         self.save_button = QPushButton("Save", self)
 
@@ -72,6 +82,7 @@ class FinecutMainWindow(QMainWindow):
         self._build_central_stack()
         self._wire_canvas_signals()
         self._register_shortcuts()
+        self._sync_history_buttons()
 
     @property
     def document_controller(self) -> DocumentController:
@@ -139,6 +150,19 @@ class FinecutMainWindow(QMainWindow):
         toolbar.addWidget(self.font_combo_box)
         toolbar.addSeparator()
 
+        self.undo_button.setToolTip("Undo last action (Ctrl+Z)")
+        self.undo_button.clicked.connect(self.undo_action)
+        toolbar.addWidget(self.undo_button)
+
+        self.redo_button.setToolTip("Redo action (Ctrl+Y)")
+        self.redo_button.clicked.connect(self.redo_action)
+        toolbar.addWidget(self.redo_button)
+
+        self.delete_button.setToolTip("Delete selected drawing or text object (Del)")
+        self.delete_button.clicked.connect(self.delete_selected_objects)
+        toolbar.addWidget(self.delete_button)
+        toolbar.addSeparator()
+
         self.copy_button.setToolTip("Copy flattened blueprint to clipboard (Ctrl+C)")
         self.copy_button.clicked.connect(self.copy_blueprint_to_clipboard)
         toolbar.addWidget(self.copy_button)
@@ -172,11 +196,27 @@ class FinecutMainWindow(QMainWindow):
         self._new_snip_shortcut = QShortcut(QKeySequence("Ctrl+N"), self)
         self._new_snip_shortcut.activated.connect(self.start_screen_snip)
 
+        self._undo_shortcut = QShortcut(QKeySequence("Ctrl+Z"), self)
+        self._undo_shortcut.activated.connect(self.undo_action)
+
+        self._redo_shortcut = QShortcut(QKeySequence("Ctrl+Y"), self)
+        self._redo_shortcut.activated.connect(self.redo_action)
+
+        self._delete_shortcut = QShortcut(QKeySequence("Del"), self)
+        self._delete_shortcut.activated.connect(self.delete_selected_objects)
+
+        self._escape_shortcut = QShortcut(QKeySequence("Esc"), self)
+        self._escape_shortcut.activated.connect(self.canvas_scene.clear_active_interaction)
+
         self._copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
         self._copy_shortcut.activated.connect(self.copy_blueprint_to_clipboard)
 
         self._save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self._save_shortcut.activated.connect(lambda: self.save_blueprint_to_file())
+
+    def _sync_history_buttons(self) -> None:
+        self.undo_button.setEnabled(self._document_controller.can_undo)
+        self.redo_button.setEnabled(self._document_controller.can_redo)
 
     def set_active_tool(self, tool: CanvasTool) -> None:
         """Switch the active canvas tool between Draw and Text across controller, scene, and UI."""
@@ -219,6 +259,60 @@ class FinecutMainWindow(QMainWindow):
             if font_family.value == text:
                 self.set_font_family(font_family)
                 return
+
+    def undo_action(self) -> bool:
+        """Undo the last annotation action and refresh the canvas scene."""
+        if self.canvas_scene.draft_text_item is not None:
+            self.canvas_scene.draft_text_item.cancel()
+
+        doc = self._document_controller.undo()
+        self._sync_history_buttons()
+        if doc is None:
+            return False
+
+        self.canvas_scene.set_document(doc)
+        self.statusBar().showMessage("Undid last action.", 2500)
+        return True
+
+    def redo_action(self) -> bool:
+        """Redo the most recently undone annotation action and refresh the canvas scene."""
+        if self.canvas_scene.draft_text_item is not None:
+            self.canvas_scene.draft_text_item.cancel()
+
+        doc = self._document_controller.redo()
+        self._sync_history_buttons()
+        if doc is None:
+            return False
+
+        self.canvas_scene.set_document(doc)
+        self.statusBar().showMessage("Redid action.", 2500)
+        return True
+
+    def delete_selected_objects(self) -> int:
+        """Delete currently selected stroke or text objects from the document and scene."""
+        if not self._document_controller.has_document:
+            return 0
+        if self.canvas_scene.draft_text_item is not None:
+            return 0
+
+        selected_ids = self.canvas_scene.selected_object_ids()
+        if not selected_ids:
+            self.statusBar().showMessage(
+                "Select a drawing (double-click) or text object to delete.",
+                3000,
+            )
+            return 0
+
+        updated_doc: CanvasDocument | None = None
+        for obj_id in selected_ids:
+            updated_doc = self._document_controller.remove_object(obj_id)
+
+        if updated_doc is not None:
+            self.canvas_scene.set_document(updated_doc)
+
+        self._sync_history_buttons()
+        self.statusBar().showMessage(f"Deleted {len(selected_ids)} object(s).", 2500)
+        return len(selected_ids)
 
     def copy_blueprint_to_clipboard(self) -> bool:
         """Flatten the active blueprint canvas and copy it onto the system clipboard."""
@@ -273,6 +367,7 @@ class FinecutMainWindow(QMainWindow):
         document = self._document_controller.start_new_document(base_image)
         self.canvas_scene.set_document(document)
         self._central_stack.setCurrentWidget(self.canvas_view)
+        self._sync_history_buttons()
 
         self._restore_window()
         self.statusBar().showMessage(
@@ -290,17 +385,20 @@ class FinecutMainWindow(QMainWindow):
             return
         stroke = self._document_controller.add_stroke(points)
         self.canvas_scene.add_stroke_item(stroke)
+        self._sync_history_buttons()
 
     def _on_text_committed(self, text: str, position: Point) -> None:
         if not self._document_controller.has_document:
             return
         text_obj = self._document_controller.add_text(text=text, position=position)
         self.canvas_scene.add_text_item(text_obj)
+        self._sync_history_buttons()
 
     def _on_object_moved(self, object_id: str, new_position: Point) -> None:
         if not self._document_controller.has_document:
             return
         self._document_controller.move_object(object_id, new_position)
+        self._sync_history_buttons()
 
     def _restore_window(self) -> None:
         self.showNormal()

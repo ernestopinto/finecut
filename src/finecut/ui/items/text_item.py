@@ -61,6 +61,11 @@ class TextGraphicsItem(QGraphicsTextItem):
         """Return the StrokeColor of this text object."""
         return self._text_color
 
+    def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setSelected(True)
+        super().mousePressEvent(event)
+
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         super().mouseReleaseEvent(event)
         if event.button() == Qt.MouseButton.LeftButton and self._on_moved is not None:

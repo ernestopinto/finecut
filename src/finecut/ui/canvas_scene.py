@@ -3,7 +3,7 @@
 from math import hypot
 
 from PySide6.QtCore import QObject, QPointF, QRectF, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QKeyEvent, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -157,6 +157,26 @@ class BlueprintCanvasScene(QGraphicsScene):
             if stroke_id != except_id and item.is_move_enabled:
                 item.disable_move_mode()
 
+    def selected_object_ids(self) -> tuple[str, ...]:
+        """Return the domain IDs of any currently selected or move-enabled canvas objects."""
+        selected: list[str] = []
+        for stroke_id, stroke_item in self._stroke_items.items():
+            if stroke_item.is_move_enabled or stroke_item.isSelected():
+                selected.append(stroke_id)
+        for text_id, text_item in self._text_items.items():
+            if text_item.isSelected():
+                selected.append(text_id)
+        return tuple(selected)
+
+    def clear_active_interaction(self) -> None:
+        """Cancel any draft editor or preview stroke, exit move mode, and clear selection."""
+        if self._draft_text_item is not None:
+            self._draft_text_item.cancel()
+            return
+        self._cancel_preview_stroke()
+        self.deactivate_all_move_modes()
+        self.clearSelection()
+
     def render_flattened_image(self) -> BaseImage:
         """Flatten the base crop and all visible annotation items into a single BaseImage."""
         if self._base_pixmap_item is None:
@@ -213,6 +233,7 @@ class BlueprintCanvasScene(QGraphicsScene):
             scene_pos = event.scenePos()
             hit_stroke = self._stroke_item_at(scene_pos)
             if hit_stroke is not None:
+                self.clearSelection()
                 self.deactivate_all_move_modes(except_id=hit_stroke.stroke_id)
                 hit_stroke.enable_move_mode()
                 event.accept()
@@ -226,6 +247,16 @@ class BlueprintCanvasScene(QGraphicsScene):
                 event.accept()
                 return
         super().mouseDoubleClickEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() == Qt.Key.Key_Escape:
+            if self._draft_text_item is not None:
+                super().keyPressEvent(event)
+                return
+            self.clear_active_interaction()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.has_base_image:
