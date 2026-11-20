@@ -2,8 +2,8 @@
 
 from math import hypot
 
-from PySide6.QtCore import QObject, QPointF, Qt, Signal
-from PySide6.QtGui import QColor, QPen
+from PySide6.QtCore import QObject, QPointF, QRectF, Qt, Signal
+from PySide6.QtGui import QColor, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from finecut.domain.models import (
+    BaseImage,
     CanvasDocument,
     CanvasTool,
     FontFamily,
@@ -21,7 +22,7 @@ from finecut.domain.models import (
     StrokeObject,
     TextObject,
 )
-from finecut.infrastructure.screen_capturer import base_image_to_pixmap
+from finecut.infrastructure.screen_capturer import base_image_to_pixmap, pixmap_to_base_image
 from finecut.ui.items.stroke_item import StrokeGraphicsItem, build_painter_path
 from finecut.ui.items.text_item import DraftTextGraphicsItem, TextGraphicsItem
 
@@ -155,6 +156,35 @@ class BlueprintCanvasScene(QGraphicsScene):
         for stroke_id, item in self._stroke_items.items():
             if stroke_id != except_id and item.is_move_enabled:
                 item.disable_move_mode()
+
+    def render_flattened_image(self) -> BaseImage:
+        """Flatten the base crop and all visible annotation items into a single BaseImage."""
+        if self._base_pixmap_item is None:
+            raise RuntimeError("Cannot flatten scene when no base image is loaded.")
+
+        if self._draft_text_item is not None:
+            self._draft_text_item.commit_or_cancel()
+
+        self._cancel_preview_stroke()
+        self.deactivate_all_move_modes()
+        self.clearSelection()
+
+        base_pixmap = self._base_pixmap_item.pixmap()
+        output_pixmap = QPixmap(base_pixmap.width(), base_pixmap.height())
+        output_pixmap.setDevicePixelRatio(base_pixmap.devicePixelRatio())
+        output_pixmap.fill(Qt.GlobalColor.transparent)
+
+        scene_rect = self.sceneRect()
+        target_rect = QRectF(0.0, 0.0, scene_rect.width(), scene_rect.height())
+
+        painter = QPainter(output_pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+        self.render(painter, target_rect, scene_rect)
+        painter.end()
+
+        return pixmap_to_base_image(output_pixmap)
 
     def _notify_object_moved(self, object_id: str, new_position: Point) -> None:
         self.object_moved.emit(object_id, new_position)
