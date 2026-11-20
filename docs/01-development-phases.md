@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`) and Phase 1 / `FC-002` (Domain Core Models & `CanvasDocument` Foundation).
-> - **Next Up:** Write ticket **`FC-003`** — *Windows Screen Crop Overlay (`+ Novo`) & Base Image Loading*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), and Phase 1 / `FC-003` (Windows Screen Crop Overlay & Base Image Loading).
+> - **Next Up (Phase 2):** Write ticket **`FC-004`** — *Freehand Drawing Tool (Red/Blue) & Double-Click-to-Move Stroke Objects*.
 
 ---
 
@@ -33,8 +33,8 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Multi-monitor & Windows HiDPI scaling support.
   - Cropped image immediately renders as the base image on the editing canvas.
 - **Planned Ticket(s):**
-  - [x] `FC-002`: Domain Core Models & `CanvasDocument` Foundation (`DONE`).
-  - `FC-003`: Windows Screen Crop Overlay (`+ Novo`) & Base Image Loading.
+  - [x] `FC-002`: Domain Core Models & `CanvasDocument` Foundation (`DONE` — `59a23e3`).
+  - [x] `FC-003`: Windows Screen Crop Overlay (`+ Novo`) & Base Image Loading (`DONE`).
 - **Exit Criteria:** User can crop any window/screen area on single or multi-monitor Windows setups and immediately see the crisp crop inside Finecut.
 
 ---
@@ -74,17 +74,21 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
 
 ---
 
-## Phase 4 — Windows Packaging & Automated Release Pipeline
-**Goal:** Deliver Finecut as a standalone Windows `.exe` with a proper installer, automated on merges to `main`.
+## Phase 4 — Windows Launcher, Installer & Automated Release Pipeline
+**Goal:** Deliver Finecut as a standalone Windows GUI launcher (`Finecut.exe`) with a proper Windows setup installer (`FinecutSetup.exe`), automated on merges to `main`.
 
 - **Deliverables:**
-  - Application icon, Windows version metadata, and PyInstaller `--onedir` spec producing `Finecut.exe`.
-  - Inno Setup (`.iss`) script generating `FinecutSetup-<version>.exe` (Start Menu entry, optional desktop shortcut, proper uninstaller in Windows Settings).
-  - Automated deploy CI/CD pipeline triggered when `develop` is merged into `main`: runs full test suite -> builds `Finecut.exe` -> builds `FinecutSetup.exe` -> attaches installer to tagged release/artifact.
+  - **Windows Launcher (`Finecut.exe` & Dev Launcher)**:
+    - Windowed GUI executable (`console=False`, no terminal popup) with custom Finecut `.ico` icon and Windows version metadata via PyInstaller `--onedir`.
+    - Local one-click launcher script (`run_finecut.bat`) for launching Finecut directly from Windows Explorer during development without opening a terminal.
+  - **Windows Installer (`FinecutSetup-<version>.exe`)**:
+    - Inno Setup (`packaging/installer.iss`) wizard installing Finecut, creating the **Start Menu launcher**, optional **Desktop shortcut launcher**, **"Launch Finecut"** finish action, and standard Windows Settings uninstaller.
+  - **Automated Release CI/CD Pipeline**:
+    - Triggered when `develop` is merged into `main`: runs full test suite -> builds `Finecut.exe` launcher bundle -> compiles `FinecutSetup-<version>.exe` installer -> attaches installer to tagged GitHub release/artifact.
 - **Planned Ticket(s):**
-  - `FC-008`: PyInstaller `.exe` Build & Inno Setup Windows Installer.
+  - `FC-008`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
   - `FC-009`: Automated Release Pipeline on Merge to `main`.
-- **Exit Criteria:** Clean Windows machine can run `FinecutSetup.exe`, launch Finecut from Start Menu without Python installed, annotate a crop, and uninstall cleanly.
+- **Exit Criteria:** Clean Windows machine can run `FinecutSetup.exe`, launch Finecut directly from the Desktop or Start Menu launcher icon without Python installed, annotate a crop, and uninstall cleanly.
 
 ---
 

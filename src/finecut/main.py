@@ -5,12 +5,19 @@ from collections.abc import Sequence
 
 from PySide6.QtWidgets import QApplication
 
+from finecut.application.document_controller import DocumentController
+from finecut.infrastructure.screen_capturer import QtScreenCapturer
 from finecut.ui.main_window import FinecutMainWindow
 
 
 def create_main_window() -> FinecutMainWindow:
     """Instantiate the main window with wired application dependencies."""
-    return FinecutMainWindow()
+    controller = DocumentController()
+    capturer = QtScreenCapturer()
+    return FinecutMainWindow(
+        document_controller=controller,
+        screen_capturer=capturer,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
