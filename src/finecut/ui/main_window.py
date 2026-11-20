@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -32,7 +32,9 @@ from finecut.infrastructure.export_adapters import QtClipboardAdapter, QtFileIma
 from finecut.infrastructure.screen_capturer import QtScreenCapturer
 from finecut.ui.canvas_scene import BlueprintCanvasScene
 from finecut.ui.canvas_view import BlueprintCanvasView
+from finecut.ui.color_swatch_picker import ColorSwatchPicker
 from finecut.ui.snip_overlay import SnipOverlay
+from finecut.ui.toolbar_icons import create_brush_icon, create_paper_sheet_icon
 
 
 class FinecutMainWindow(QMainWindow):
@@ -57,14 +59,14 @@ class FinecutMainWindow(QMainWindow):
         self._active_overlay: SnipOverlay | None = None
 
         self.new_snip_button = QPushButton("+ Novo", self)
-        self.draw_tool_button = QPushButton("Draw", self)
-        self.text_tool_button = QPushButton("Text", self)
+        self.draw_tool_button = QPushButton(self)
+        self.text_tool_button = QPushButton(self)
         self._tool_button_group = QButtonGroup(self)
 
-        self.red_color_button = QPushButton("Red", self)
-        self.blue_color_button = QPushButton("Blue", self)
-        self.black_color_button = QPushButton("Black", self)
-        self._color_button_group = QButtonGroup(self)
+        self.color_swatch_picker = ColorSwatchPicker(
+            initial_color=self._document_controller.active_color,
+            parent=self,
+        )
 
         self.font_combo_box = QComboBox(self)
         self.undo_button = QPushButton("Undo", self)
@@ -109,16 +111,28 @@ class FinecutMainWindow(QMainWindow):
         toolbar.addSeparator()
 
         self._tool_button_group.setExclusive(True)
-        tool_buttons: tuple[tuple[QPushButton, CanvasTool, str], ...] = (
-            (self.draw_tool_button, CanvasTool.DRAW, "Freehand Draw tool"),
+        tool_buttons: tuple[tuple[QPushButton, CanvasTool, QIcon, str, str], ...] = (
+            (
+                self.draw_tool_button,
+                CanvasTool.DRAW,
+                create_brush_icon(),
+                "Draw",
+                "Freehand Draw tool",
+            ),
             (
                 self.text_tool_button,
                 CanvasTool.TEXT,
+                create_paper_sheet_icon(),
+                "Text",
                 "Text tool (double-click image to add text, click outside or Enter to save)",
             ),
         )
-        for button, tool, tooltip in tool_buttons:
+        for button, tool, icon, accessible_name, tooltip in tool_buttons:
             button.setCheckable(True)
+            button.setIcon(icon)
+            button.setIconSize(QSize(20, 20))
+            button.setFixedSize(QSize(34, 34))
+            button.setAccessibleName(accessible_name)
             button.setToolTip(tooltip)
             self._tool_button_group.addButton(button)
             toolbar.addWidget(button)
@@ -127,20 +141,8 @@ class FinecutMainWindow(QMainWindow):
         self.draw_tool_button.setChecked(True)
         toolbar.addSeparator()
 
-        self._color_button_group.setExclusive(True)
-        color_buttons: tuple[tuple[QPushButton, StrokeColor, str], ...] = (
-            (self.red_color_button, StrokeColor.RED, "Draw / write in Red (#E53935)"),
-            (self.blue_color_button, StrokeColor.BLUE, "Draw / write in Blue (#1E88E5)"),
-            (self.black_color_button, StrokeColor.BLACK, "Draw / write in Black (#000000)"),
-        )
-        for button, color, tooltip in color_buttons:
-            button.setCheckable(True)
-            button.setToolTip(tooltip)
-            self._color_button_group.addButton(button)
-            toolbar.addWidget(button)
-            button.clicked.connect(lambda checked=False, c=color: self.set_stroke_color(c))
-
-        self.red_color_button.setChecked(True)
+        self.color_swatch_picker.color_selected.connect(self.set_stroke_color)
+        toolbar.addWidget(self.color_swatch_picker)
         toolbar.addSeparator()
 
         self.font_combo_box.setToolTip("Select text font family")
@@ -232,18 +234,11 @@ class FinecutMainWindow(QMainWindow):
             target_button.setChecked(True)
 
     def set_stroke_color(self, color: StrokeColor) -> None:
-        """Switch the active drawing/text color across controller, scene, and toolbar."""
+        """Switch the active drawing/text color across controller, scene, and swatch picker."""
         self._document_controller.set_active_color(color)
         self.canvas_scene.set_active_color(color)
-
-        button_by_color = {
-            StrokeColor.RED: self.red_color_button,
-            StrokeColor.BLUE: self.blue_color_button,
-            StrokeColor.BLACK: self.black_color_button,
-        }
-        target_button = button_by_color[color]
-        if not target_button.isChecked():
-            target_button.setChecked(True)
+        if self.color_swatch_picker.active_color != color:
+            self.color_swatch_picker.set_color(color)
 
     def set_font_family(self, font: FontFamily) -> None:
         """Switch the active text font family across controller, scene, and toolbar."""

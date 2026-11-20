@@ -35,8 +35,15 @@ def _load_window_with_crop(qtbot: QtBot) -> FinecutMainWindow:
 
 
 def test_toolbar_tool_toggle_and_four_fonts_selector(qtbot: QtBot) -> None:
-    """Verify Draw/Text toggle and 4-font dropdown selector."""
+    """Verify icon-based Draw/Text toggle (Brush / Paper Sheet) and 4-font dropdown selector."""
     window = _load_window_with_crop(qtbot)
+
+    assert window.draw_tool_button.text() == ""
+    assert window.draw_tool_button.icon().isNull() is False
+    assert window.draw_tool_button.accessibleName() == "Draw"
+    assert window.text_tool_button.text() == ""
+    assert window.text_tool_button.icon().isNull() is False
+    assert window.text_tool_button.accessibleName() == "Text"
 
     assert window.draw_tool_button.isChecked() is True
     assert window.text_tool_button.isChecked() is False
@@ -68,7 +75,7 @@ def test_text_tool_requires_double_click_and_validates_on_single_click_outside(
     viewport = window.canvas_view.viewport()
 
     window.text_tool_button.click()
-    window.blue_color_button.click()
+    window.color_swatch_picker.swatch_buttons[StrokeColor.BLUE].click()
     window.set_font_family(FontFamily.COURIER)
 
     single_click_pos: QPoint = window.canvas_view.mapFromScene(QPointF(50.0, 50.0))
