@@ -77,6 +77,11 @@ class StrokeGraphicsItem(QGraphicsPathItem):
 
     def enable_move_mode(self) -> None:
         """Unlock this stroke object so the user can drag and reposition it."""
+        scene = self.scene()
+        if scene is not None:
+            for item in scene.selectedItems():
+                if item is not self:
+                    item.setSelected(False)
         self._is_move_enabled = True
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable, True)
@@ -125,7 +130,13 @@ class StrokeGraphicsItem(QGraphicsPathItem):
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if self._is_move_enabled and event.button() == Qt.MouseButton.LeftButton:
+            scene = self.scene()
+            if scene is not None:
+                for item in scene.selectedItems():
+                    if item is not self:
+                        item.setSelected(False)
             super().mousePressEvent(event)
+            self.setSelected(True)
             event.accept()
             return
         event.ignore()

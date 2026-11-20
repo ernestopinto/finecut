@@ -1,4 +1,4 @@
-"""UI tests for Text Annotation Tool (4 fonts, Enter-to-commit) and movable text objects."""
+"""UI tests for Text Tool double-click creation, click-outside commit, and independent moving."""
 
 from PySide6.QtCore import QPoint, QPointF, Qt
 from PySide6.QtGui import QColor, QKeyEvent, QPixmap
@@ -28,7 +28,7 @@ def _sample_base_image(width: int = 500, height: int = 400) -> BaseImage:
 def _load_window_with_crop(qtbot: QtBot) -> FinecutMainWindow:
     window = FinecutMainWindow(screen_capturer=FakeScreenCapturer(500, 400))
     qtbot.addWidget(window)
-    window.resize(760, 560)
+    window.resize(820, 560)
     window.show()
     window._on_snip_captured(_sample_base_image())
     return window
@@ -60,8 +60,10 @@ def test_toolbar_tool_toggle_and_four_fonts_selector(qtbot: QtBot) -> None:
     assert window.canvas_scene.active_font.value == FontFamily.BOOK_ANTIQUA.value
 
 
-def test_text_tool_click_type_enter_commits_and_escape_cancels(qtbot: QtBot) -> None:
-    """Verify clicking canvas in Text mode opens draft editor, Enter commits, and Esc cancels."""
+def test_text_tool_requires_double_click_and_validates_on_single_click_outside(
+    qtbot: QtBot,
+) -> None:
+    """Verify double-click starts text, single-click outside validates/saves, and Esc cancels."""
     window = _load_window_with_crop(qtbot)
     viewport = window.canvas_view.viewport()
 
@@ -69,12 +71,21 @@ def test_text_tool_click_type_enter_commits_and_escape_cancels(qtbot: QtBot) -> 
     window.blue_color_button.click()
     window.set_font_family(FontFamily.COURIER)
 
-    click_pos: QPoint = window.canvas_view.mapFromScene(QPointF(80.0, 90.0))
+    single_click_pos: QPoint = window.canvas_view.mapFromScene(QPointF(50.0, 50.0))
     QTest.mouseClick(
         viewport,
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
-        click_pos,
+        single_click_pos,
+    )
+    assert window.canvas_scene.draft_text_item is None
+
+    dclick_pos: QPoint = window.canvas_view.mapFromScene(QPointF(80.0, 90.0))
+    QTest.mouseDClick(
+        viewport,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        dclick_pos,
     )
 
     draft = window.canvas_scene.draft_text_item
@@ -82,12 +93,14 @@ def test_text_tool_click_type_enter_commits_and_escape_cancels(qtbot: QtBot) -> 
     assert draft.font_family == FontFamily.COURIER
 
     draft.setPlainText("Login Button")
-    enter_event = QKeyEvent(
-        QKeyEvent.Type.KeyPress,
-        Qt.Key.Key_Return,
+
+    outside_click_pos: QPoint = window.canvas_view.mapFromScene(QPointF(350.0, 300.0))
+    QTest.mouseClick(
+        viewport,
+        Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
+        outside_click_pos,
     )
-    draft.keyPressEvent(enter_event)
 
     assert window.canvas_scene.draft_text_item is None
     assert len(window.canvas_scene.text_items) == 1
@@ -98,7 +111,7 @@ def test_text_tool_click_type_enter_commits_and_escape_cancels(qtbot: QtBot) -> 
     assert text_item.text_color == StrokeColor.BLUE
 
     second_pos: QPoint = window.canvas_view.mapFromScene(QPointF(200.0, 200.0))
-    QTest.mouseClick(
+    QTest.mouseDClick(
         viewport,
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
@@ -118,10 +131,10 @@ def test_text_tool_click_type_enter_commits_and_escape_cancels(qtbot: QtBot) -> 
     assert len(window.canvas_scene.text_items) == 1
 
 
-def test_committed_text_object_is_movable_and_coexists_with_n_drawings(
+def test_multiple_objects_move_independently_one_at_a_time(
     qtbot: QtBot,
 ) -> None:
-    """Verify committed text objects can be dragged/moved and coexist with n drawings."""
+    """Regression test: dragging object 2 must never move object 1 (each object is independent)."""
     window = _load_window_with_crop(qtbot)
     viewport = window.canvas_view.viewport()
 
@@ -142,10 +155,12 @@ def test_committed_text_object_is_movable_and_coexists_with_n_drawings(
     )
 
     window.text_tool_button.click()
+    outside_pt = window.canvas_view.mapFromScene(QPointF(420.0, 350.0))
+
     for idx, font in enumerate((FontFamily.ARIAL, FontFamily.TIMES_NEW_ROMAN)):
         window.set_font_family(font)
-        pos = window.canvas_view.mapFromScene(QPointF(60.0, 110.0 + idx * 80.0))
-        QTest.mouseClick(
+        pos = window.canvas_view.mapFromScene(QPointF(60.0, 100.0 + idx * 100.0))
+        QTest.mouseDClick(
             viewport,
             Qt.MouseButton.LeftButton,
             Qt.KeyboardModifier.NoModifier,
@@ -154,39 +169,66 @@ def test_committed_text_object_is_movable_and_coexists_with_n_drawings(
         draft = window.canvas_scene.draft_text_item
         assert draft is not None
         draft.setPlainText(f"Note {idx + 1}")
-        enter_event = QKeyEvent(
-            QKeyEvent.Type.KeyPress,
-            Qt.Key.Key_Return,
+        QTest.mouseClick(
+            viewport,
+            Qt.MouseButton.LeftButton,
             Qt.KeyboardModifier.NoModifier,
+            outside_pt,
         )
-        draft.keyPressEvent(enter_event)
+        assert window.canvas_scene.draft_text_item is None
 
     assert len(window.canvas_scene.stroke_items) == 1
     assert len(window.canvas_scene.text_items) == 2
 
-    first_text_item = next(iter(window.canvas_scene.text_items.values()))
-    initial_pos = QPointF(first_text_item.pos())
-    item_center = first_text_item.sceneBoundingRect().center()
-    start_view_pt: QPoint = window.canvas_view.mapFromScene(item_center)
-    target_view_pt: QPoint = window.canvas_view.mapFromScene(
-        QPointF(item_center.x() + 80.0, item_center.y() + 60.0)
-    )
+    text_items_list = list(window.canvas_scene.text_items.values())
+    first_text = text_items_list[0]
+    second_text = text_items_list[1]
 
+    first_initial_pos = QPointF(first_text.pos())
+    second_initial_pos = QPointF(second_text.pos())
+
+    c1 = first_text.sceneBoundingRect().center()
+    c1_view = window.canvas_view.mapFromScene(c1)
+    c1_target_view = window.canvas_view.mapFromScene(QPointF(c1.x() + 90.0, c1.y() + 20.0))
     QTest.mousePress(
         viewport,
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
-        start_view_pt,
+        c1_view,
     )
-    QTest.mouseMove(viewport, target_view_pt)
+    QTest.mouseMove(viewport, c1_target_view)
     QTest.mouseRelease(
         viewport,
         Qt.MouseButton.LeftButton,
         Qt.KeyboardModifier.NoModifier,
-        target_view_pt,
+        c1_target_view,
     )
 
-    assert first_text_item.pos() != initial_pos
+    first_moved_pos = QPointF(first_text.pos())
+    assert first_moved_pos != first_initial_pos
+    assert second_text.pos() == second_initial_pos
+
+    c2 = second_text.sceneBoundingRect().center()
+    c2_view = window.canvas_view.mapFromScene(c2)
+    c2_target_view = window.canvas_view.mapFromScene(QPointF(c2.x() + 110.0, c2.y() + 40.0))
+    QTest.mousePress(
+        viewport,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        c2_view,
+    )
+    QTest.mouseMove(viewport, c2_target_view)
+    QTest.mouseRelease(
+        viewport,
+        Qt.MouseButton.LeftButton,
+        Qt.KeyboardModifier.NoModifier,
+        c2_target_view,
+    )
+
+    second_moved_pos = QPointF(second_text.pos())
+    assert second_moved_pos != second_initial_pos
+    assert first_text.pos() == first_moved_pos
+
     doc = window.document_controller.current_document
     assert doc is not None
     visible_objs = doc.visible_objects()
@@ -195,6 +237,10 @@ def test_committed_text_object_is_movable_and_coexists_with_n_drawings(
     assert isinstance(visible_objs[1], TextObject)
     assert isinstance(visible_objs[2], TextObject)
     assert visible_objs[1].position == Point(
-        float(first_text_item.pos().x()),
-        float(first_text_item.pos().y()),
+        float(first_moved_pos.x()),
+        float(first_moved_pos.y()),
+    )
+    assert visible_objs[2].position == Point(
+        float(second_moved_pos.x()),
+        float(second_moved_pos.y()),
     )

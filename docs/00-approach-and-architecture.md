@@ -20,9 +20,9 @@ Instead of a full-blown image editor, Finecut optimizes the shortest path from s
   - Restricted by design to **3 colors only**: **Red**, **Blue**, and **Black** (KIS).
   - Each completed stroke is stored as an **independent movable object**: after creation, the user **double-clicks** the stroke to enter move/drag state and reposition it.
 - **Text Tool**:
-  - Add text annotations directly on the canvas.
+  - Add text annotations directly on the canvas by **double-clicking** in Text mode.
   - Restricted by design to **4 classic fonts**: `Arial`, `Times New Roman`, `Book Antiqua`, and `Courier` (resolved cleanly on Windows via `Courier New` / `Courier`).
-  - Pressing **`Enter`** commits the text as an **independent movable object** that can be freely dragged/repositioned afterward.
+  - **One single click outside** the text editor (or pressing **`Enter`**) validates and commits the text as an **independent movable object** that can be freely dragged/repositioned afterward (moving strictly one object at a time).
 - **Multi-Object Composition**:
   - The base cropped screenshot supports `n` independent drawing and text objects layered on top of it.
 
