@@ -151,7 +151,34 @@ def test_main_window_end_to_end_snip_loads_canvas_and_preserves_on_cancel(qtbot:
 
     window.start_screen_snip()
     assert window.active_overlay is not None
-    window.active_overlay.cancel_snip()
+    assert window.windowOpacity() == 0.0
+    assert window.active_overlay.action_strip.isVisible() is True
+    assert window.active_overlay.cancel_button.text() == "Cancel Selection"
 
+    window.active_overlay.cancel_button.click()
+
+    assert window.active_overlay is None
+    assert window.windowOpacity() == 1.0
     assert window.is_showing_canvas is True
     assert window.document_controller.current_document.base_image.width == 200
+
+
+def test_snip_overlay_centers_action_strip_on_primary_screen_in_extended_displays(
+    qtbot: QtBot,
+) -> None:
+    """Verify on dual/extended screens the action strip centers on Screen 1, not the bezel."""
+    frozen = _make_base_image(width=3840, height=1080)
+    virtual_geo = QRect(0, 0, 3840, 1080)
+    primary_geo = QRect(0, 0, 1920, 1080)
+
+    overlay = SnipOverlay(
+        frozen,
+        virtual_geometry=virtual_geo,
+        primary_screen_geometry=primary_geo,
+    )
+    qtbot.addWidget(overlay)
+    overlay.show()
+
+    strip_center_x = overlay.action_strip.x() + overlay.action_strip.width() // 2
+    assert abs(strip_center_x - 960) <= 2
+    assert overlay.action_strip.geometry().right() < 1920

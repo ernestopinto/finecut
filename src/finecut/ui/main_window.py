@@ -349,7 +349,9 @@ class FinecutMainWindow(QMainWindow):
         return resolved_path
 
     def start_screen_snip(self) -> None:
-        """Hide the main window, freeze the screen, and launch the SnipOverlay."""
+        """Completely hide the main window, freeze the screen, and launch the SnipOverlay."""
+        self.setWindowOpacity(0.0)
+        self.showMinimized()
         self.hide()
         QApplication.processEvents()
 
@@ -401,6 +403,7 @@ class FinecutMainWindow(QMainWindow):
         self._sync_history_buttons()
 
     def _restore_window(self) -> None:
+        self.setWindowOpacity(1.0)
         self.showNormal()
         self.raise_()
         self.activateWindow()
