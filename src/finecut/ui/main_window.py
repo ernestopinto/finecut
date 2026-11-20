@@ -114,7 +114,7 @@ class FinecutMainWindow(QMainWindow):
             (
                 self.text_tool_button,
                 CanvasTool.TEXT,
-                "Text annotation tool (press Enter to commit)",
+                "Text tool (double-click image to add text, click outside or Enter to save)",
             ),
         )
         for button, tool, tooltip in tool_buttons:

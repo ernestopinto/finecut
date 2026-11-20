@@ -227,23 +227,45 @@ class BlueprintCanvasScene(QGraphicsScene):
                 return item
         return None
 
+    def _select_exclusively(self, target_item: QGraphicsItem) -> None:
+        """Ensure only target_item is selected and movable across the entire scene."""
+        for stroke_item in self._stroke_items.values():
+            if stroke_item is not target_item:
+                if stroke_item.is_move_enabled:
+                    stroke_item.disable_move_mode()
+                stroke_item.setSelected(False)
+        for text_item in self._text_items.values():
+            if text_item is not target_item:
+                text_item.setSelected(False)
+        target_item.setSelected(True)
+
     def mouseDoubleClickEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton and self.has_base_image:
             self._cancel_preview_stroke()
             scene_pos = event.scenePos()
-            hit_stroke = self._stroke_item_at(scene_pos)
-            if hit_stroke is not None:
+
+            if self._draft_text_item is not None and self._draft_item_at(scene_pos) is None:
+                self._draft_text_item.commit_or_cancel()
+
+            if self._active_tool == CanvasTool.TEXT:
+                if self._draft_item_at(scene_pos) is not None:
+                    super().mouseDoubleClickEvent(event)
+                    return
+                hit_text = self._text_item_at(scene_pos)
+                if hit_text is not None:
+                    self._select_exclusively(hit_text)
+                    event.accept()
+                    return
+                self.deactivate_all_move_modes()
                 self.clearSelection()
-                self.deactivate_all_move_modes(except_id=hit_stroke.stroke_id)
-                hit_stroke.enable_move_mode()
+                self._start_draft_text(scene_pos)
                 event.accept()
                 return
-            if (
-                self._active_tool == CanvasTool.TEXT
-                and self._draft_text_item is None
-                and self._text_item_at(scene_pos) is None
-            ):
-                self._start_draft_text(scene_pos)
+
+            hit_stroke = self._stroke_item_at(scene_pos)
+            if hit_stroke is not None:
+                self._select_exclusively(hit_stroke)
+                hit_stroke.enable_move_mode()
                 event.accept()
                 return
         super().mouseDoubleClickEvent(event)
@@ -268,22 +290,27 @@ class BlueprintCanvasScene(QGraphicsScene):
 
             if self._draft_text_item is not None:
                 self._draft_text_item.commit_or_cancel()
+                self.deactivate_all_move_modes()
+                self.clearSelection()
+                event.accept()
+                return
 
             hit_text = self._text_item_at(scene_pos)
             if hit_text is not None:
-                self.deactivate_all_move_modes()
+                self._select_exclusively(hit_text)
                 super().mousePressEvent(event)
                 return
 
             hit_stroke = self._stroke_item_at(scene_pos)
             if hit_stroke is not None and hit_stroke.is_move_enabled:
+                self._select_exclusively(hit_stroke)
                 super().mousePressEvent(event)
                 return
 
             self.deactivate_all_move_modes()
+            self.clearSelection()
 
             if self._active_tool == CanvasTool.TEXT:
-                self._start_draft_text(scene_pos)
                 event.accept()
                 return
 

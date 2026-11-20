@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), and Phase 3 / `FC-007` (Object Deletion & Undo/Redo History).
-> - **Next Up (Phase 4):** Write ticket **`FC-008`** — *Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`)*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), Phase 3 / `FC-007` (`c6c0193`), and Phase 3 / `FC-008` (Text Creation Mechanics & Independent Object Movement).
+> - **Next Up (Phase 4):** Write ticket **`FC-009`** — *Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`)*.
 
 ---
 
@@ -69,8 +69,9 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Toolbar visual polish matching the clean, distraction-free Windows 11 *Ferramenta de Recorte* aesthetic (`docs/image1.jpg`).
 - **Planned Ticket(s):**
   - [x] `FC-006`: Flatten & Export (Clipboard Copy + Save PNG/JPG) (`DONE` — `b5d959d`).
-  - [x] `FC-007`: Object Deletion & Undo/Redo Command History (`DONE`).
-- **Exit Criteria:** Full end-to-end daily workflow (`+ Novo` -> draw/text/move -> `Ctrl+C` paste into Jira/Slack/Teams or `Ctrl+S` to PNG) works smoothly.
+  - [x] `FC-007`: Object Deletion & Undo/Redo Command History (`DONE` — `c6c0193`).
+  - [x] `FC-008`: Fix Text Creation Mechanics (Double-Click to Add, Single-Click Outside to Commit) & Independent Single-Object Movement Bug (`DONE`).
+- **Exit Criteria:** Full end-to-end daily workflow (`+ Novo` -> draw/text/move -> `Ctrl+C` paste into Jira/Slack/Teams or `Ctrl+S` to PNG) works smoothly with independent single-object movement.
 
 ---
 
@@ -86,8 +87,8 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - **Automated Release CI/CD Pipeline**:
     - Triggered when `develop` is merged into `main`: runs full test suite -> builds `Finecut.exe` launcher bundle -> compiles `FinecutSetup-<version>.exe` installer -> attaches installer to tagged GitHub release/artifact.
 - **Planned Ticket(s):**
-  - `FC-008`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
-  - `FC-009`: Automated Release Pipeline on Merge to `main`.
+  - `FC-009`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
+  - `FC-010`: Automated Release Pipeline on Merge to `main`.
 - **Exit Criteria:** Clean Windows machine can run `FinecutSetup.exe`, launch Finecut directly from the Desktop or Start Menu launcher icon without Python installed, annotate a crop, and uninstall cleanly.
 
 ---
@@ -101,4 +102,4 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Assign new strokes/texts to the active layer or move objects across layers.
   - Optional future backlog (prioritized post-MVP): global Windows capture shortcut, basic geometric blueprint primitives (box/arrow), save/reopen editable `.finecut` project files.
 - **Planned Ticket(s):**
-  - `FC-010`: Layer Panel UI, Visibility/Lock Controls & Z-Order Reordering.
+  - `FC-011`: Layer Panel UI, Visibility/Lock Controls & Z-Order Reordering.

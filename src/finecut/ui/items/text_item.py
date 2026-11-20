@@ -63,8 +63,14 @@ class TextGraphicsItem(QGraphicsTextItem):
 
     def mousePressEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self.setSelected(True)
+            scene = self.scene()
+            if scene is not None:
+                for item in scene.selectedItems():
+                    if item is not self:
+                        item.setSelected(False)
         super().mousePressEvent(event)
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.setSelected(True)
 
     def mouseReleaseEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         super().mouseReleaseEvent(event)
