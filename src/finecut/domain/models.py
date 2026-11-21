@@ -7,11 +7,36 @@ from enum import StrEnum
 
 
 class StrokeColor(StrEnum):
-    """Allowed drawing and annotation colors (strictly Red, Blue, and Black per KIS spec)."""
+    """Classic 20-color swatch palette (2 rows x 10 columns) for drawing and text annotations."""
 
-    RED = "#E53935"
-    BLUE = "#1E88E5"
+    # Row 1: Primary / vivid colors
     BLACK = "#000000"
+    GRAY = "#7F7F7F"
+    DARK_RED = "#880015"
+    RED = "#E53935"
+    ORANGE = "#FF7F27"
+    YELLOW = "#FFF200"
+    GREEN = "#22B14C"
+    TURQUOISE = "#00A2E8"
+    BLUE = "#1E88E5"
+    PURPLE = "#A349A4"
+
+    # Row 2: Light / pastel colors
+    WHITE = "#FFFFFF"
+    LIGHT_GRAY = "#C3C3C3"
+    BROWN = "#B97A57"
+    ROSE = "#FFAEC9"
+    GOLD = "#FFC90E"
+    LIGHT_YELLOW = "#EFE4B0"
+    LIME = "#B5E61D"
+    LIGHT_TURQUOISE = "#99D9EA"
+    BLUE_GRAY = "#7092BE"
+    LAVENDER = "#C8BFE7"
+
+    @property
+    def display_name(self) -> str:
+        """Return a human-readable color label (e.g., 'Dark Red')."""
+        return self.name.replace("_", " ").title()
 
 
 class FontFamily(StrEnum):

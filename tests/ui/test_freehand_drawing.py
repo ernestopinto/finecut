@@ -27,24 +27,28 @@ def _load_window_with_crop(qtbot: QtBot) -> FinecutMainWindow:
 
 
 def test_toolbar_color_buttons_switch_active_color(qtbot: QtBot) -> None:
-    """Verify clicking Red, Blue, and Black toolbar buttons updates controller and scene color."""
+    """Verify selecting Red, Blue, and Black swatches updates controller and scene color."""
     window = _load_window_with_crop(qtbot)
 
-    def _current_colors() -> tuple[StrokeColor, StrokeColor]:
-        return (window.document_controller.active_color, window.canvas_scene.active_color)
+    def _current_colors() -> tuple[StrokeColor, StrokeColor, StrokeColor]:
+        return (
+            window.color_swatch_picker.active_color,
+            window.document_controller.active_color,
+            window.canvas_scene.active_color,
+        )
 
-    assert window.red_color_button.isChecked() is True
-    assert _current_colors() == (StrokeColor.RED, StrokeColor.RED)
+    assert window.color_swatch_picker.swatch_buttons[StrokeColor.RED].isChecked() is True
+    assert _current_colors() == (StrokeColor.RED, StrokeColor.RED, StrokeColor.RED)
 
-    window.blue_color_button.click()
-    assert window.blue_color_button.isChecked() is True
-    assert window.red_color_button.isChecked() is False
-    assert _current_colors() == (StrokeColor.BLUE, StrokeColor.BLUE)
+    window.color_swatch_picker.swatch_buttons[StrokeColor.BLUE].click()
+    assert window.color_swatch_picker.swatch_buttons[StrokeColor.BLUE].isChecked() is True
+    assert window.color_swatch_picker.swatch_buttons[StrokeColor.RED].isChecked() is False
+    assert _current_colors() == (StrokeColor.BLUE, StrokeColor.BLUE, StrokeColor.BLUE)
 
-    window.black_color_button.click()
-    assert window.black_color_button.isChecked() is True
-    assert window.blue_color_button.isChecked() is False
-    assert _current_colors() == (StrokeColor.BLACK, StrokeColor.BLACK)
+    window.color_swatch_picker.swatch_buttons[StrokeColor.BLACK].click()
+    assert window.color_swatch_picker.swatch_buttons[StrokeColor.BLACK].isChecked() is True
+    assert window.color_swatch_picker.swatch_buttons[StrokeColor.BLUE].isChecked() is False
+    assert _current_colors() == (StrokeColor.BLACK, StrokeColor.BLACK, StrokeColor.BLACK)
 
 
 def test_freehand_drawing_creates_n_independent_stroke_objects(qtbot: QtBot) -> None:
@@ -68,7 +72,7 @@ def test_freehand_drawing_creates_n_independent_stroke_objects(qtbot: QtBot) -> 
         p1_end,
     )
 
-    window.blue_color_button.click()
+    window.color_swatch_picker.swatch_buttons[StrokeColor.BLUE].click()
     p2_start = window.canvas_view.mapFromScene(QPointF(60.0, 120.0))
     p2_end = window.canvas_view.mapFromScene(QPointF(180.0, 180.0))
     QTest.mousePress(
@@ -85,7 +89,7 @@ def test_freehand_drawing_creates_n_independent_stroke_objects(qtbot: QtBot) -> 
         p2_end,
     )
 
-    window.black_color_button.click()
+    window.color_swatch_picker.swatch_buttons[StrokeColor.BLACK].click()
     p3_start = window.canvas_view.mapFromScene(QPointF(80.0, 200.0))
     p3_end = window.canvas_view.mapFromScene(QPointF(220.0, 250.0))
     QTest.mousePress(

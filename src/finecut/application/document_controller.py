@@ -61,7 +61,7 @@ class DocumentController:
         return self._active_color
 
     def set_active_color(self, color: StrokeColor) -> None:
-        """Set the active drawing/annotation color (Red, Blue, or Black)."""
+        """Set the active drawing/annotation color from the swatch palette."""
         self._active_color = color
 
     @property
