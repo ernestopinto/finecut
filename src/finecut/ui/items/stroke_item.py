@@ -17,8 +17,31 @@ from finecut.domain.models import Point, StrokeColor, StrokeObject
 HIT_TEST_PADDING_PX = 12.0
 
 
+def smooth_points(points: tuple[Point, ...], passes: int = 2) -> tuple[Point, ...]:
+    """Apply gentle 1-2-1 weighted neighbor smoothing while preserving exact endpoints."""
+    if len(points) < 3 or passes <= 0:
+        return points
+
+    current = list(points)
+    for _ in range(passes):
+        smoothed: list[Point] = [current[0]]
+        for idx in range(1, len(current) - 1):
+            prev_pt = current[idx - 1]
+            curr_pt = current[idx]
+            next_pt = current[idx + 1]
+            smoothed.append(
+                Point(
+                    x=0.25 * prev_pt.x + 0.5 * curr_pt.x + 0.25 * next_pt.x,
+                    y=0.25 * prev_pt.y + 0.5 * curr_pt.y + 0.25 * next_pt.y,
+                )
+            )
+        smoothed.append(current[-1])
+        current = smoothed
+    return tuple(current)
+
+
 def build_painter_path(points: tuple[Point, ...]) -> QPainterPath:
-    """Build a QPainterPath from an immutable sequence of domain Points."""
+    """Build a smooth quadratic-Bezier QPainterPath from an immutable sequence of domain Points."""
     path = QPainterPath()
     if not points:
         return path
@@ -27,9 +50,21 @@ def build_painter_path(points: tuple[Point, ...]) -> QPainterPath:
     path.moveTo(first.x, first.y)
     if len(points) == 1:
         path.lineTo(first.x + 0.1, first.y + 0.1)
-    else:
-        for pt in points[1:]:
-            path.lineTo(pt.x, pt.y)
+        return path
+    if len(points) == 2:
+        path.lineTo(points[1].x, points[1].y)
+        return path
+
+    smoothed = smooth_points(points)
+    for idx in range(1, len(smoothed) - 1):
+        ctrl = smoothed[idx]
+        nxt = smoothed[idx + 1]
+        mid_x = (ctrl.x + nxt.x) * 0.5
+        mid_y = (ctrl.y + nxt.y) * 0.5
+        path.quadTo(ctrl.x, ctrl.y, mid_x, mid_y)
+
+    last = smoothed[-1]
+    path.lineTo(last.x, last.y)
     return path
 
 
@@ -113,6 +148,7 @@ class StrokeGraphicsItem(QGraphicsPathItem):
         widget: QWidget | None = None,
     ) -> None:
         del option, widget
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(self.pen())
         painter.drawPath(self.path())
 

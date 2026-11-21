@@ -29,6 +29,7 @@ from finecut.ui.items.text_item import DraftTextGraphicsItem, TextGraphicsItem
 BASE_IMAGE_Z_VALUE = -1000.0
 PREVIEW_STROKE_Z_VALUE = 10000.0
 MIN_STROKE_DRAG_DISTANCE_PX = 2.0
+MIN_POINT_SAMPLE_DISTANCE_PX = 3.0
 
 
 class BlueprintCanvasScene(QGraphicsScene):
@@ -322,8 +323,16 @@ class BlueprintCanvasScene(QGraphicsScene):
     def mouseMoveEvent(self, event: QGraphicsSceneMouseEvent) -> None:
         if self._is_drawing_stroke and self._preview_path_item is not None:
             pos = event.scenePos()
-            self._active_points.append(Point(float(pos.x()), float(pos.y())))
-            self._preview_path_item.setPath(build_painter_path(tuple(self._active_points)))
+            candidate = Point(float(pos.x()), float(pos.y()))
+            if not self._active_points or (
+                hypot(
+                    candidate.x - self._active_points[-1].x,
+                    candidate.y - self._active_points[-1].y,
+                )
+                >= MIN_POINT_SAMPLE_DISTANCE_PX
+            ):
+                self._active_points.append(candidate)
+                self._preview_path_item.setPath(build_painter_path(tuple(self._active_points)))
             event.accept()
             return
         super().mouseMoveEvent(event)
