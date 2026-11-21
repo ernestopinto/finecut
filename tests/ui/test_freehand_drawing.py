@@ -1,12 +1,13 @@
 """UI tests for freehand drawing in Red/Blue/Black and double-click-to-move stroke objects."""
 
 from PySide6.QtCore import QPoint, QPointF, Qt
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtGui import QColor, QPainterPath, QPixmap
 from PySide6.QtTest import QTest
 from pytestqt.qtbot import QtBot
 
 from finecut.domain.models import BaseImage, Point, StrokeColor, StrokeObject
 from finecut.infrastructure.screen_capturer import pixmap_to_base_image
+from finecut.ui.items.stroke_item import build_painter_path, smooth_points
 from finecut.ui.main_window import FinecutMainWindow
 from tests.ui.test_main_window import FakeScreenCapturer
 
@@ -199,3 +200,29 @@ def test_double_click_enables_move_mode_and_dragging_updates_stroke_position(
     )
     assert stroke_item.is_move_enabled is False
     assert len(window.canvas_scene.stroke_items) == 2
+
+
+def test_stroke_path_uses_smooth_quadratic_bezier_and_reduces_staircase_jitter() -> None:
+    """Verify diagonal staircase points are smoothed and rendered via quadratic Bezier curves."""
+    jagged_diagonal = (
+        Point(0.0, 0.0),
+        Point(4.0, 0.0),
+        Point(4.0, 4.0),
+        Point(8.0, 4.0),
+        Point(8.0, 8.0),
+        Point(12.0, 8.0),
+        Point(12.0, 12.0),
+    )
+    smoothed = smooth_points(jagged_diagonal)
+
+    assert smoothed[0] == jagged_diagonal[0]
+    assert smoothed[-1] == jagged_diagonal[-1]
+    raw_deviation = sum(abs(pt.x - pt.y) for pt in jagged_diagonal)
+    smoothed_deviation = sum(abs(pt.x - pt.y) for pt in smoothed)
+    assert smoothed_deviation < raw_deviation
+
+    path = build_painter_path(jagged_diagonal)
+    element_types = [path.elementAt(i).type for i in range(path.elementCount())]
+    assert QPainterPath.ElementType.CurveToElement in element_types
+    end_el = path.elementAt(path.elementCount() - 1)
+    assert (end_el.x, end_el.y) == (12.0, 12.0)

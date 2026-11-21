@@ -24,12 +24,26 @@ class FakeScreenCapturer:
 
 
 def test_main_window_displays_new_snip_button_and_launches_overlay(qtbot: QtBot) -> None:
-    """Verify the window renders its title, + Novo button, and opens SnipOverlay on click."""
+    """Verify the window renders uniform icon-only toolbar buttons and opens SnipOverlay."""
     window = FinecutMainWindow(screen_capturer=FakeScreenCapturer())
     qtbot.addWidget(window)
 
     assert window.windowTitle() == "Finecut"
-    assert window.new_snip_button.text() == "+ Novo"
+    icon_buttons = (
+        (window.new_snip_button, "New Snip"),
+        (window.draw_tool_button, "Draw"),
+        (window.text_tool_button, "Text"),
+        (window.undo_button, "Undo"),
+        (window.redo_button, "Redo"),
+        (window.delete_button, "Delete"),
+        (window.copy_button, "Copy"),
+        (window.save_button, "Save"),
+    )
+    for button, expected_name in icon_buttons:
+        assert button.text() == ""
+        assert button.icon().isNull() is False
+        assert button.accessibleName() == expected_name
+
     assert window.is_showing_canvas is False
 
     window.new_snip_button.click()

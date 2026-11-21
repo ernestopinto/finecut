@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QGuiApplication, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -34,7 +34,36 @@ from finecut.ui.canvas_scene import BlueprintCanvasScene
 from finecut.ui.canvas_view import BlueprintCanvasView
 from finecut.ui.color_swatch_picker import ColorSwatchPicker
 from finecut.ui.snip_overlay import SnipOverlay
-from finecut.ui.toolbar_icons import create_brush_icon, create_paper_sheet_icon
+from finecut.ui.toolbar_icons import (
+    create_brush_icon,
+    create_copy_icon,
+    create_delete_icon,
+    create_new_icon,
+    create_paper_sheet_icon,
+    create_redo_icon,
+    create_save_icon,
+    create_undo_icon,
+)
+
+_TOOL_BUTTON_STYLE = """
+QPushButton {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+QPushButton:hover {
+    background-color: #F3F4F6;
+    border: 1px solid #D1D5DB;
+}
+QPushButton:checked {
+    background-color: #E5E7EB;
+    border: 1px solid #9CA3AF;
+}
+QPushButton:checked:hover {
+    background-color: #D1D5DB;
+    border: 1px solid #6B7280;
+}
+"""
 
 
 class FinecutMainWindow(QMainWindow):
@@ -58,7 +87,7 @@ class FinecutMainWindow(QMainWindow):
         self._image_exporter: ImageExporter = image_exporter or QtFileImageExporter()
         self._active_overlay: SnipOverlay | None = None
 
-        self.new_snip_button = QPushButton("+ Novo", self)
+        self.new_snip_button = QPushButton(self)
         self.draw_tool_button = QPushButton(self)
         self.text_tool_button = QPushButton(self)
         self._tool_button_group = QButtonGroup(self)
@@ -69,17 +98,18 @@ class FinecutMainWindow(QMainWindow):
         )
 
         self.font_combo_box = QComboBox(self)
-        self.undo_button = QPushButton("Undo", self)
-        self.redo_button = QPushButton("Redo", self)
-        self.delete_button = QPushButton("Delete", self)
-        self.copy_button = QPushButton("Copy", self)
-        self.save_button = QPushButton("Save", self)
+        self.undo_button = QPushButton(self)
+        self.redo_button = QPushButton(self)
+        self.delete_button = QPushButton(self)
+        self.copy_button = QPushButton(self)
+        self.save_button = QPushButton(self)
 
         self.canvas_scene = BlueprintCanvasScene(self)
         self.canvas_view = BlueprintCanvasView(self.canvas_scene, self)
         self._central_stack = QStackedWidget(self)
         self._placeholder_widget = QWidget(self)
 
+        self._toolbar: QToolBar | None = None
         self._build_toolbar()
         self._build_central_stack()
         self._wire_canvas_signals()
@@ -101,11 +131,30 @@ class FinecutMainWindow(QMainWindow):
         """Return True when the central stack is displaying the BlueprintCanvasView."""
         return self._central_stack.currentWidget() is self.canvas_view
 
+    @staticmethod
+    def _configure_icon_button(
+        button: QPushButton,
+        icon: QIcon,
+        accessible_name: str,
+        tooltip: str,
+    ) -> None:
+        button.setIcon(icon)
+        button.setIconSize(QSize(20, 20))
+        button.setFixedSize(QSize(34, 34))
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setAccessibleName(accessible_name)
+        button.setToolTip(tooltip)
+
     def _build_toolbar(self) -> None:
         toolbar = QToolBar("Main Toolbar", self)
         toolbar.setMovable(False)
 
-        self.new_snip_button.setToolTip("Capture a screen region to start blueprinting (Ctrl+N)")
+        self._configure_icon_button(
+            self.new_snip_button,
+            create_new_icon(),
+            "New Snip",
+            "New screen capture (Ctrl+N)",
+        )
         self.new_snip_button.clicked.connect(self.start_screen_snip)
         toolbar.addWidget(self.new_snip_button)
         toolbar.addSeparator()
@@ -129,11 +178,8 @@ class FinecutMainWindow(QMainWindow):
         )
         for button, tool, icon, accessible_name, tooltip in tool_buttons:
             button.setCheckable(True)
-            button.setIcon(icon)
-            button.setIconSize(QSize(20, 20))
-            button.setFixedSize(QSize(34, 34))
-            button.setAccessibleName(accessible_name)
-            button.setToolTip(tooltip)
+            self._configure_icon_button(button, icon, accessible_name, tooltip)
+            button.setStyleSheet(_TOOL_BUTTON_STYLE)
             self._tool_button_group.addButton(button)
             toolbar.addWidget(button)
             button.clicked.connect(lambda checked=False, t=tool: self.set_active_tool(t))
@@ -152,28 +198,54 @@ class FinecutMainWindow(QMainWindow):
         toolbar.addWidget(self.font_combo_box)
         toolbar.addSeparator()
 
-        self.undo_button.setToolTip("Undo last action (Ctrl+Z)")
+        self._configure_icon_button(
+            self.undo_button,
+            create_undo_icon(),
+            "Undo",
+            "Undo last action (Ctrl+Z)",
+        )
         self.undo_button.clicked.connect(self.undo_action)
         toolbar.addWidget(self.undo_button)
 
-        self.redo_button.setToolTip("Redo action (Ctrl+Y)")
+        self._configure_icon_button(
+            self.redo_button,
+            create_redo_icon(),
+            "Redo",
+            "Redo action (Ctrl+Y)",
+        )
         self.redo_button.clicked.connect(self.redo_action)
         toolbar.addWidget(self.redo_button)
 
-        self.delete_button.setToolTip("Delete selected drawing or text object (Del)")
+        self._configure_icon_button(
+            self.delete_button,
+            create_delete_icon(),
+            "Delete",
+            "Delete selected drawing or text object (Del)",
+        )
         self.delete_button.clicked.connect(self.delete_selected_objects)
         toolbar.addWidget(self.delete_button)
         toolbar.addSeparator()
 
-        self.copy_button.setToolTip("Copy flattened blueprint to clipboard (Ctrl+C)")
+        self._configure_icon_button(
+            self.copy_button,
+            create_copy_icon(),
+            "Copy",
+            "Copy flattened blueprint to clipboard (Ctrl+C)",
+        )
         self.copy_button.clicked.connect(self.copy_blueprint_to_clipboard)
         toolbar.addWidget(self.copy_button)
 
-        self.save_button.setToolTip("Save flattened blueprint to file (Ctrl+S)")
+        self._configure_icon_button(
+            self.save_button,
+            create_save_icon(),
+            "Save",
+            "Save flattened blueprint to file (Ctrl+S)",
+        )
         self.save_button.clicked.connect(lambda checked=False: self.save_blueprint_to_file())
         toolbar.addWidget(self.save_button)
 
         self.addToolBar(toolbar)
+        self._toolbar = toolbar
 
     def _build_central_stack(self) -> None:
         layout = QVBoxLayout(self._placeholder_widget)
@@ -366,11 +438,41 @@ class FinecutMainWindow(QMainWindow):
         self._central_stack.setCurrentWidget(self.canvas_view)
         self._sync_history_buttons()
 
+        self._adapt_window_to_image(base_image)
         self._restore_window()
+        self.canvas_view.fit_canvas_to_viewport()
         self.statusBar().showMessage(
             f"Captured crop: {base_image.width} x {base_image.height} px",
             4000,
         )
+
+    def _adapt_window_to_image(self, base_image: BaseImage) -> None:
+        """Resize the main window to fit the captured crop cleanly within available screen space."""
+        logical_w = round(base_image.width / base_image.device_pixel_ratio)
+        logical_h = round(base_image.height / base_image.device_pixel_ratio)
+
+        toolbar_h = self._toolbar.sizeHint().height() if self._toolbar is not None else 44
+        status_h = max(self.statusBar().sizeHint().height(), 24)
+        chrome_w = 24
+        chrome_h = toolbar_h + status_h + 24
+
+        desired_w = max(self.minimumWidth(), logical_w + chrome_w)
+        desired_h = max(self.minimumHeight(), logical_h + chrome_h)
+
+        screen = self.screen() or QGuiApplication.primaryScreen()
+        if screen is not None:
+            avail = screen.availableGeometry()
+            max_w = max(self.minimumWidth(), int(avail.width() * 0.92))
+            max_h = max(self.minimumHeight(), int(avail.height() * 0.90))
+            target_w = min(desired_w, max_w)
+            target_h = min(desired_h, max_h)
+            self.resize(target_w, target_h)
+
+            x = avail.x() + max(0, (avail.width() - target_w) // 2)
+            y = avail.y() + max(0, (avail.height() - target_h) // 2)
+            self.move(x, y)
+        else:
+            self.resize(desired_w, desired_h)
 
     def _on_snip_cancelled(self) -> None:
         self._active_overlay = None

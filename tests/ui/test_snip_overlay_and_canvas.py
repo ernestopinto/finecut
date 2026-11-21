@@ -182,3 +182,22 @@ def test_snip_overlay_centers_action_strip_on_primary_screen_in_extended_display
     strip_center_x = overlay.action_strip.x() + overlay.action_strip.width() // 2
     assert abs(strip_center_x - 960) <= 2
     assert overlay.action_strip.geometry().right() < 1920
+
+
+def test_large_crop_adapts_window_and_fits_canvas_without_scrollbars(qtbot: QtBot) -> None:
+    """Verify big crops disable scrollbars, grow the window, and scale down if oversized."""
+    window = FinecutMainWindow(screen_capturer=FakeScreenCapturer(1200, 800))
+    qtbot.addWidget(window)
+    window.show()
+
+    assert window.canvas_view.horizontalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    assert window.canvas_view.verticalScrollBarPolicy() == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+
+    large_crop = _make_base_image(width=2400, height=1600)
+    window._on_snip_captured(large_crop)
+
+    assert window.width() >= window.minimumWidth()
+    assert window.height() >= window.minimumHeight()
+    # Oversized crop must be scaled down cleanly inside the viewport (< 1.0 transform scale)
+    assert window.canvas_view.transform().m11() < 1.0
+    assert window.canvas_view.transform().m22() < 1.0

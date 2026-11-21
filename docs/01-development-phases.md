@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), Phase 3 / `FC-007` (`c6c0193`), Phase 3 / `FC-008` (`a3a5997`), Phase 3 / `FC-009` (`5430dfe`), and Phase 3 / `FC-010` (Square Color Swatch Picker & Icon-Based Draw/Text Toolbar Buttons).
-> - **Next Up (Phase 4):** Write ticket **`FC-011`** — *Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`)*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), Phase 3 / `FC-007` (`c6c0193`), Phase 3 / `FC-008` (`a3a5997`), Phase 3 / `FC-009` (`5430dfe`), Phase 3 / `FC-010` (`bd4393d`), and Phase 3 / `FC-011` (Smooth Brush Tracing, Uniform Toolbar Icons & Auto-Fit Canvas Sizing).
+> - **Next Up (Phase 4):** Write ticket **`FC-012`** — *Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`)*.
 
 ---
 
@@ -72,7 +72,8 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - [x] `FC-007`: Object Deletion & Undo/Redo Command History (`DONE` — `c6c0193`).
   - [x] `FC-008`: Fix Text Creation Mechanics (Double-Click to Add, Single-Click Outside to Commit) & Independent Single-Object Movement Bug (`DONE` — `a3a5997`).
   - [x] `FC-009`: Minimize App to Top Floating Action Strip with "Cancel Selection" Button During Screen Capture (`DONE` — `5430dfe`).
-  - [x] `FC-010`: Square Color Swatch Picker (20-Color Palette) & Icon-Based Draw/Text Toolbar Buttons (`DONE`).
+  - [x] `FC-010`: Square Color Swatch Picker (20-Color Palette) & Icon-Based Draw/Text Toolbar Buttons (`DONE` — `bd4393d`).
+  - [x] `FC-011`: Smooth Freehand Brush Tracing, Uniform Toolbar Icons & Auto-Fit Canvas Sizing (`DONE`).
 - **Exit Criteria:** Full end-to-end daily workflow (`+ Novo` -> floating top action strip / drag crop -> draw/text/move -> `Ctrl+C` paste into Jira/Slack/Teams or `Ctrl+S` to PNG) works smoothly with independent single-object movement.
 
 ---
@@ -89,8 +90,8 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - **Automated Release CI/CD Pipeline**:
     - Triggered when `develop` is merged into `main`: runs full test suite -> builds `Finecut.exe` launcher bundle -> compiles `FinecutSetup-<version>.exe` installer -> attaches installer to tagged GitHub release/artifact.
 - **Planned Ticket(s):**
-  - `FC-011`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
-  - `FC-012`: Automated Release Pipeline on Merge to `main`.
+  - `FC-012`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
+  - `FC-013`: Automated Release Pipeline on Merge to `main`.
 - **Exit Criteria:** Clean Windows machine can run `FinecutSetup.exe`, launch Finecut directly from the Desktop or Start Menu launcher icon without Python installed, annotate a crop, and uninstall cleanly.
 
 ---
@@ -104,4 +105,4 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - Assign new strokes/texts to the active layer or move objects across layers.
   - Optional future backlog (prioritized post-MVP): global Windows capture shortcut, basic geometric blueprint primitives (box/arrow), save/reopen editable `.finecut` project files.
 - **Planned Ticket(s):**
-  - `FC-013`: Layer Panel UI, Visibility/Lock Controls & Z-Order Reordering.
+  - `FC-014`: Layer Panel UI, Visibility/Lock Controls & Z-Order Reordering.
