@@ -3,8 +3,8 @@
 Each phase delivers a testable, usable increment. Features are broken into JIRA-style `.md` tickets in `docs/tickets/` and implemented sequentially on `develop` following the `Plan -> Ticket -> Review -> Approval -> Implementation -> Test -> Commit & Push` cycle.
 
 > **Current Status & Next Step:**
-> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), Phase 3 / `FC-007` (`c6c0193`), Phase 3 / `FC-008` (`a3a5997`), Phase 3 / `FC-009` (`5430dfe`), Phase 3 / `FC-010` (`bd4393d`), and Phase 3 / `FC-011` (Smooth Brush Tracing, Uniform Toolbar Icons & Auto-Fit Canvas Sizing).
-> - **Next Up (Phase 4):** Write ticket **`FC-012`** — *Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`)*.
+> - **Completed:** Phase 0 / `FC-001` (`a156bf5`), Phase 1 / `FC-002` (`59a23e3`), Phase 1 / `FC-003` (`56e909e`), Phase 2 / `FC-004` (`104d36b`), Phase 2 / `FC-005` (`ef27947`, `4f88e14`), Phase 3 / `FC-006` (`b5d959d`), Phase 3 / `FC-007` (`c6c0193`), Phase 3 / `FC-008` (`a3a5997`), Phase 3 / `FC-009` (`5430dfe`), Phase 3 / `FC-010` (`bd4393d`), Phase 3 / `FC-011` (`cbd49a7`), and Phase 4 / `FC-012` (Windows GUI Launcher `Finecut.exe`, Dev Launcher & Inno Setup Installer).
+> - **Next Up (Phase 4):** Write ticket **`FC-013`** — *Automated Release Pipeline on Merge to `main`*.
 
 ---
 
@@ -90,7 +90,7 @@ Each phase delivers a testable, usable increment. Features are broken into JIRA-
   - **Automated Release CI/CD Pipeline**:
     - Triggered when `develop` is merged into `main`: runs full test suite -> builds `Finecut.exe` launcher bundle -> compiles `FinecutSetup-<version>.exe` installer -> attaches installer to tagged GitHub release/artifact.
 - **Planned Ticket(s):**
-  - `FC-012`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`).
+  - [x] `FC-012`: Windows GUI Launcher (`Finecut.exe`), Dev Launcher & Inno Setup Windows Installer (`FinecutSetup.exe`) (`DONE`).
   - `FC-013`: Automated Release Pipeline on Merge to `main`.
 - **Exit Criteria:** Clean Windows machine can run `FinecutSetup.exe`, launch Finecut directly from the Desktop or Start Menu launcher icon without Python installed, annotate a crop, and uninstall cleanly.
 

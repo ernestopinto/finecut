@@ -311,7 +311,7 @@ class BlueprintCanvasScene(QGraphicsScene):
             self.deactivate_all_move_modes()
             self.clearSelection()
 
-            if self._active_tool == CanvasTool.TEXT:
+            if self._active_tool != CanvasTool.DRAW:
                 event.accept()
                 return
 

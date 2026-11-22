@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
     QToolBar,
     QVBoxLayout,
@@ -35,6 +36,7 @@ from finecut.ui.canvas_view import BlueprintCanvasView
 from finecut.ui.color_swatch_picker import ColorSwatchPicker
 from finecut.ui.snip_overlay import SnipOverlay
 from finecut.ui.toolbar_icons import (
+    create_area_selection_icon,
     create_brush_icon,
     create_copy_icon,
     create_delete_icon,
@@ -88,6 +90,7 @@ class FinecutMainWindow(QMainWindow):
         self._active_overlay: SnipOverlay | None = None
 
         self.new_snip_button = QPushButton(self)
+        self.area_selection_tool_button = QPushButton(self)
         self.draw_tool_button = QPushButton(self)
         self.text_tool_button = QPushButton(self)
         self._tool_button_group = QButtonGroup(self)
@@ -162,6 +165,13 @@ class FinecutMainWindow(QMainWindow):
         self._tool_button_group.setExclusive(True)
         tool_buttons: tuple[tuple[QPushButton, CanvasTool, QIcon, str, str], ...] = (
             (
+                self.area_selection_tool_button,
+                CanvasTool.AREA_SELECT,
+                create_area_selection_icon(),
+                "Area Selection",
+                "Area Selection tool",
+            ),
+            (
                 self.draw_tool_button,
                 CanvasTool.DRAW,
                 create_brush_icon(),
@@ -196,7 +206,10 @@ class FinecutMainWindow(QMainWindow):
             self.font_combo_box.addItem(font_family.value)
         self.font_combo_box.currentTextChanged.connect(self._on_font_combo_text_changed)
         toolbar.addWidget(self.font_combo_box)
-        toolbar.addSeparator()
+
+        spacer = QWidget(toolbar)
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        toolbar.addWidget(spacer)
 
         self._configure_icon_button(
             self.undo_button,
@@ -293,11 +306,12 @@ class FinecutMainWindow(QMainWindow):
         self.redo_button.setEnabled(self._document_controller.can_redo)
 
     def set_active_tool(self, tool: CanvasTool) -> None:
-        """Switch the active canvas tool between Draw and Text across controller, scene, and UI."""
+        """Switch the active canvas tool across controller, scene, and UI."""
         self._document_controller.set_active_tool(tool)
         self.canvas_scene.set_active_tool(tool)
 
         button_by_tool = {
+            CanvasTool.AREA_SELECT: self.area_selection_tool_button,
             CanvasTool.DRAW: self.draw_tool_button,
             CanvasTool.TEXT: self.text_tool_button,
         }

@@ -3,7 +3,7 @@
 from PySide6.QtGui import QColor, QPixmap
 from pytestqt.qtbot import QtBot
 
-from finecut.domain.models import BaseImage, Rect
+from finecut.domain.models import BaseImage, CanvasTool, Rect
 from finecut.infrastructure.screen_capturer import crop_base_image, pixmap_to_base_image
 from finecut.ui.main_window import FinecutMainWindow
 
@@ -31,6 +31,7 @@ def test_main_window_displays_new_snip_button_and_launches_overlay(qtbot: QtBot)
     assert window.windowTitle() == "Finecut"
     icon_buttons = (
         (window.new_snip_button, "New Snip"),
+        (window.area_selection_tool_button, "Area Selection"),
         (window.draw_tool_button, "Draw"),
         (window.text_tool_button, "Text"),
         (window.undo_button, "Undo"),
@@ -52,3 +53,28 @@ def test_main_window_displays_new_snip_button_and_launches_overlay(qtbot: QtBot)
     window.active_overlay.cancel_snip()
     assert window.active_overlay is None
     assert "cancelled" in window.statusBar().currentMessage()
+
+
+def test_toolbar_area_selection_tool_and_right_aligned_actions(qtbot: QtBot) -> None:
+    """Verify Area Selection sits between New Snip and Draw, and actions align to the right."""
+    window = FinecutMainWindow(screen_capturer=FakeScreenCapturer())
+    qtbot.addWidget(window)
+    window.resize(900, 480)
+    window.show()
+    qtbot.waitExposed(window)
+
+    assert window.new_snip_button.x() < window.area_selection_tool_button.x()
+    assert window.area_selection_tool_button.x() < window.draw_tool_button.x()
+
+    # Expanding spacer pushes Undo..Save cleanly to the right edge of the toolbar
+    gap_before_actions = window.undo_button.x() - (
+        window.font_combo_box.x() + window.font_combo_box.width()
+    )
+    assert gap_before_actions > 100
+    assert window.save_button.x() + window.save_button.width() > window.width() - 30
+
+    window.area_selection_tool_button.click()
+    assert window.area_selection_tool_button.isChecked() is True
+    assert window.draw_tool_button.isChecked() is False
+    assert window.document_controller.active_tool == CanvasTool.AREA_SELECT
+    assert window.canvas_scene.active_tool == CanvasTool.AREA_SELECT

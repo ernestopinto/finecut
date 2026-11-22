@@ -51,6 +51,7 @@ class FontFamily(StrEnum):
 class CanvasTool(StrEnum):
     """Active canvas interaction tool mode."""
 
+    AREA_SELECT = "area_select"
     DRAW = "draw"
     TEXT = "text"
 

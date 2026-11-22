@@ -7,6 +7,7 @@ _ICON_LOGICAL_SIZE = 24
 _ICON_SCALE = 2
 _STROKE_COLOR = QColor("#1F2937")
 _ACCENT_FILL = QColor("#3B82F6")
+_SELECTION_TINT_FILL = QColor("#DBEAFE")
 _PAPER_FILL = QColor("#FFFFFF")
 _SOFT_SURFACE_FILL = QColor("#E5E7EB")
 _FLOPPY_BODY_FILL = QColor("#4B5563")
@@ -68,6 +69,50 @@ def create_new_icon() -> QIcon:
         painter.drawLine(QPointF(d1, bottom), QPointF(d2, bottom))
         painter.drawLine(QPointF(left, d1), QPointF(left, d2))
         painter.drawLine(QPointF(right, d1), QPointF(right, d2))
+
+    painter.end()
+    return QIcon(pixmap)
+
+
+def create_area_selection_icon() -> QIcon:
+    """Render a blue-tinted selection region with corner handles and a pointer cursor."""
+    pixmap, painter = _new_icon_canvas()
+
+    # Tinted selection region with crisp solid blue border (distinct from dashed New Snip icon)
+    selection_rect = QRectF(3.5, 4.0, 13.0, 11.5)
+    painter.setPen(_round_pen(_ACCENT_FILL, 1.5))
+    painter.setBrush(_SELECTION_TINT_FILL)
+    painter.drawRect(selection_rect)
+
+    # Corner resize handles on the three corners away from the pointer cursor
+    handle_size = 2.4
+    half_handle = handle_size / 2.0
+    painter.setPen(_round_pen(_ACCENT_FILL, 1.1))
+    painter.setBrush(_PAPER_FILL)
+    for cx, cy in ((3.5, 4.0), (16.5, 4.0), (3.5, 15.5)):
+        painter.drawRect(
+            QRectF(cx - half_handle, cy - half_handle, handle_size, handle_size),
+        )
+
+    # Crisp pointer cursor anchored at the bottom-right of the selected area
+    pointer = QPainterPath()
+    pointer.moveTo(14.0, 12.4)
+    pointer.lineTo(14.0, 20.6)
+    pointer.lineTo(16.2, 18.6)
+    pointer.lineTo(17.6, 21.4)
+    pointer.lineTo(19.1, 20.6)
+    pointer.lineTo(17.7, 17.9)
+    pointer.lineTo(20.6, 17.9)
+    pointer.closeSubpath()
+
+    # White halo so the dark cursor separates cleanly from the blue border
+    painter.setPen(_round_pen(_PAPER_FILL, 1.8))
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+    painter.drawPath(pointer)
+
+    painter.setPen(_round_pen(_STROKE_COLOR, 1.1))
+    painter.setBrush(_STROKE_COLOR)
+    painter.drawPath(pointer)
 
     painter.end()
     return QIcon(pixmap)
@@ -277,3 +322,69 @@ def create_save_icon() -> QIcon:
 
     painter.end()
     return QIcon(pixmap)
+
+
+def render_app_icon_pixmap(pixel_size: int = 64) -> QPixmap:
+    """Render the Finecut application icon (dashed crop marquee + red accent stroke)."""
+    pixmap = QPixmap(pixel_size, pixel_size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    scale = pixel_size / 64.0
+    painter.scale(scale, scale)
+
+    # Clean light rounded-square app tile
+    painter.setPen(_round_pen(QColor("#CBD5E1"), 2.0))
+    painter.setBrush(QColor("#FFFFFF"))
+    painter.drawRoundedRect(QRectF(4.0, 4.0, 56.0, 56.0), 12.0, 12.0)
+
+    # Dashed crop selection marquee inside the tile
+    marquee_pen = QPen(
+        _STROKE_COLOR,
+        3.6,
+        Qt.PenStyle.SolidLine,
+        Qt.PenCapStyle.SquareCap,
+        Qt.PenJoinStyle.MiterJoin,
+    )
+    painter.setPen(marquee_pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    left, top, right, bottom = 14.0, 14.0, 50.0, 50.0
+    corner = 6.5
+    corners = (
+        (QPointF(left, top + corner), QPointF(left, top), QPointF(left + corner, top)),
+        (QPointF(right - corner, top), QPointF(right, top), QPointF(right, top + corner)),
+        (QPointF(right, bottom - corner), QPointF(right, bottom), QPointF(right - corner, bottom)),
+        (QPointF(left + corner, bottom), QPointF(left, bottom), QPointF(left, bottom - corner)),
+    )
+    for p1, p2, p3 in corners:
+        path = QPainterPath()
+        path.moveTo(p1)
+        path.lineTo(p2)
+        path.lineTo(p3)
+        painter.drawPath(path)
+
+    for d1, d2 in ((26.5, 30.0), (34.0, 37.5)):
+        painter.drawLine(QPointF(d1, top), QPointF(d2, top))
+        painter.drawLine(QPointF(d1, bottom), QPointF(d2, bottom))
+        painter.drawLine(QPointF(left, d1), QPointF(left, d2))
+        painter.drawLine(QPointF(right, d1), QPointF(right, d2))
+
+    # Smooth red annotation curve accent inside the crop
+    accent = QPainterPath()
+    accent.moveTo(21.0, 42.0)
+    accent.cubicTo(27.0, 31.0, 35.0, 35.0, 43.0, 22.0)
+    painter.setPen(_round_pen(QColor("#E53935"), 4.8))
+    painter.drawPath(accent)
+
+    painter.end()
+    return pixmap
+
+
+def create_app_icon() -> QIcon:
+    """Build a multi-resolution QIcon for the Finecut window title bar and taskbar."""
+    icon = QIcon()
+    for size in (16, 24, 32, 48, 64, 128, 256):
+        icon.addPixmap(render_app_icon_pixmap(size))
+    return icon

@@ -22,10 +22,20 @@ See [docs/](docs/) for architecture, roadmap, and SCRUM tickets:
 .venv\Scripts\python.exe -m finecut.main
 ```
 
-Or via the installed GUI script:
+Or double-click `run_finecut.bat` directly from Windows Explorer (launches Finecut with no console window).
+
+## Building Windows `.exe` & Installer
+
+1. Install optional build tools (`PyInstaller`) into `.venv`:
 
 ```powershell
-.venv\Scripts\finecut.exe
+.venv\Scripts\python.exe -m pip install -e ".[dev,build]"
+```
+
+2. Build the standalone `dist\Finecut\Finecut.exe` bundle (and `dist\installer\FinecutSetup-<version>.exe` when [Inno Setup 6](https://jrsoftware.org/isinfo.php) is installed):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\packaging\build_windows.ps1
 ```
 
 ## Quality Checks
